@@ -9,7 +9,7 @@ granger_causality <- function(x, y, lag = 3){
 
 gams.test <- function(dataset, k1 = 3){
   tryCatch({
-    model <- gam(log(y) ~ s(time, bs = "cr", k = k1) + x, 
+    model <- gam(log(y) ~ s(time, bs = "cr", k = k1) + x + weekdays(as.Date(date)), 
                    data = dataset, family = gaussian, na.action = na.omit)
     coeff <- summary(model)$p.coeff[2]
     p.value <- summary(model)$p.pv[2]
@@ -42,19 +42,23 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations,star
 #   wind.speed = 13
 #   max.distance = 1000
 #   include.west = FALSE
+  require(mgcv)
+  
   start.date <- as.Date(paste(year,"-",start.day, sep = ""))
   end.date <- as.Date(paste(year,"-",end.day,sep = ""))
   
-  fit_gams_model <- function(emissions, PM, monitor, powerplant, lag){
+  make_dataset <- function(emissions, PM, monitor, powerplant, lag){
     y <- emissions[powerplant, ]
     x <- PM[monitor, ]
     time <- 1:(length(x) - lag)
+    date <- colnames(emissions)
     if(lag > 0){
       y <- y[-1*((length(y)-lag + 1):length(y))]
       x <- x[-1*(1:lag)]
+      date <- date[-1*((length(date)-lag + 1):length(date))]
     }
-    dataset <- data.frame(cbind(time,y,x))
-    return(gams.test(dataset, k1 = k1))
+    dataset <- data.frame(time,y,x,date)
+    return(dataset)
   }
   
   lag.breaks <- (1:20)*24*wind.speed
@@ -96,10 +100,13 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations,star
  
   temp <- pairs[!is.na(lag),]
   
-  gams.results <- mapply(function(emissions, PM, y, x, z) fit_gams_model(emissions, PM,powerplant = y, monitor = x,
-                                                                                                    lag = z), 
-                         x = temp$Monitor, y = temp$PP, z = temp$lag,
+  gams.results <- mapply(function(emissions, PM, y, x, z){
+    dataset <- make_dataset(emissions, PM, powerplant = y, monitor = x, lag = z)
+    return(gams.test(dataset,k1))
+    }, x = temp$Monitor, y = temp$PP, z = temp$lag,
                          MoreArgs = list(emissions = emissions, PM = PM))
+    
+  
   
   coeff <- rep(NA, nrow(pairs))
   p.value <- rep(NA, nrow(pairs))
@@ -116,21 +123,25 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations,star
   print("Model fitting complete:")
   print(Sys.time() - start.time)
   
-  
+  adj <- rep(NA, nrow(pairs))
+  adj[!is.na(pairs$lag)] <- p.adjust(gams.results[2,], method = p.adjust.method)
   
   #adjust for multiple comparisons
-  pairs$p.value_adj <- p.adjust(pairs$p.value, method = p.adjust.method)
+  pairs$p.value_adj <- adj 
   
   #edges in network
   pairs$edge <- ifelse(pairs$p.value_adj <= alpha & pairs$coeff > 0, 1, 0)
   
   pairs$max.distance <- max.distance
+  
+  print(paste("Edge density is:",round(sum(pairs$edges,na.rm = TRUE)/sum(!is.na(pairs$edges)),2), sep = ""))
 
   return(pairs)
   
 }
 
 createAdjacencyMatrix <- function(edges){
+  require(reshape2)
   network <- dcast(edges, PP ~ Monitor, value.var = "edge")
   rownames(network) <- network$PP
   network <- network[, -1]
@@ -154,12 +165,14 @@ plotEmissionsNetwork <- function(edges, emissions, PM, PP_locations, M_locations
  
   require(RColorBrewer)
   
-  # load(file = "../Data/daily_emissions_facility_temperature.RData")
-  # network = network.gams[[1]]
-  # plot.type = "highest_degree"
-  # plot.percent.of.powerplants = 100
-  # plot.diagnostics = TRUE
-  # plot.edges = TRUE
+  
+#   edges <- edges_copy[[6]]
+#   plot.type = "highest_degree"
+#   plot.percent.of.powerplants = 100
+#   plot.diagnostics = TRUE
+#   plot.edges = TRUE
+#   plot.legend = FALSE
+  
   network <- createAdjacencyMatrix(edges)
   max.distance <- edges$max.distance[1]
   
@@ -247,7 +260,7 @@ plotEmissionsNetwork <- function(edges, emissions, PM, PP_locations, M_locations
   points(PP_locations[ ,2:3], pch = 24, bg = "yellow", col = "black", lwd = 0.50, cex = 0.50)
   points(M_locations[ ,2:3], pch = 21, bg = "green", col = "black", lwd = 0.50, cex = 1)
 
-  if(plot.edges == TRUE){
+  if(plot.edges == TRUE & sum(network, na.rm = TRUE) > 0){
       #assign colors based on lag
       colors <- brewer.pal(n = 4, name = "RdYlBu")
       edge_list$color.index <- 4 - edge_list$lag
@@ -268,22 +281,22 @@ plotEmissionsNetwork <- function(edges, emissions, PM, PP_locations, M_locations
   
   #plots
   
-  if(plot.diagnostics == TRUE){
+  if(plot.diagnostics == TRUE & sum(network, na.rm = TRUE) > 0){
     #Plot 1 - observed edge probability vs distance
     barplot(height = edge_prob_dist, space = 0, main = "Edge Prob vs Distance")
     axis(1, at = 0:(length(breaks)-1), labels = breaks)
     
     
     #Plot 2 - observed edge probability by direction from PP to monitor
-    barplot(edge_prob_angle, names.arg = directions, main = "Edge Prob by Edge Direction")
+#     barplot(edge_prob_angle, names.arg = directions, main = "Edge Prob by Edge Direction")
     
     #Plot 3 - observed degree of powerplant by powerplant size category
-    degree <- rowSums(network, na.rm = TRUE)
-    plot(logNA(rowSums(emissions, na.rm = TRUE))[degree > 1], log(degree)[degree > 1],
-         xlab = "log(Total SO2 emissions)", ylab = "log(number of monitors linked)",
-         main = "Emissions vs. Number of Edges")
-    abline(lm(logNA(degree)[degree > 1] ~ logNA(rowSums(emissions, na.rm = TRUE))[degree > 1]),
-           col = "blue", lty = 2)
+#     degree <- rowSums(network, na.rm = TRUE)
+#     plot(logNA(rowSums(emissions, na.rm = TRUE))[degree > 1], log(degree)[degree > 1],
+#          xlab = "log(Total SO2 emissions)", ylab = "log(number of monitors linked)",
+#          main = "Emissions vs. Number of Edges")
+#     abline(lm(logNA(degree)[degree > 1] ~ logNA(rowSums(emissions, na.rm = TRUE))[degree > 1]),
+#            col = "blue", lty = 2)
     #boxplot(logNA(degree) ~ pp.size, data = PP_locations, xlab = "power size category", ylab = "degree")
    # print(summary(degree ~ pp.size))
   }
