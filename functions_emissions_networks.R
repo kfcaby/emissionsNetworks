@@ -134,7 +134,8 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations,star
   
   pairs$max.distance <- max.distance
   
-  print(paste("Edge density is:",round(sum(pairs$edges,na.rm = TRUE)/sum(!is.na(pairs$edges)),2), sep = ""))
+  print(paste("The number of edges is:",sum(pairs$edge,na.rm = TRUE) ,sep = " "))
+  print(paste("Edge density is:",round(sum(pairs$edge,na.rm = TRUE)/sum(!is.na(pairs$edge)),2), sep = ""))
 
   return(pairs)
   
