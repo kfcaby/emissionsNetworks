@@ -1,5 +1,19 @@
 # Basic functions for manipulating emissions/PM time series and creating an emissions network
 
+make_dataset <- function(emissions, PM, monitor, powerplant, lag){
+  y <- emissions[powerplant, ]
+  x <- PM[monitor, ]
+  time <- 1:(length(x) - lag)
+  date <- colnames(emissions)
+  if(lag > 0){
+    y <- y[-1*((length(y)-lag + 1):length(y))]
+    x <- x[-1*(1:lag)]
+    date <- date[-1*((length(date)-lag + 1):length(date))]
+  }
+  dataset <- data.frame(time,y,x,date)
+  return(dataset)
+}
+
 
 # Using MSBVAR function
 granger_causality <- function(x, y, lag = 3){
@@ -47,20 +61,7 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations,star
   start.date <- as.Date(paste(year,"-",start.day, sep = ""))
   end.date <- as.Date(paste(year,"-",end.day,sep = ""))
   
-  make_dataset <- function(emissions, PM, monitor, powerplant, lag){
-    y <- emissions[powerplant, ]
-    x <- PM[monitor, ]
-    time <- 1:(length(x) - lag)
-    date <- colnames(emissions)
-    if(lag > 0){
-      y <- y[-1*((length(y)-lag + 1):length(y))]
-      x <- x[-1*(1:lag)]
-      date <- date[-1*((length(date)-lag + 1):length(date))]
-    }
-    dataset <- data.frame(time,y,x,date)
-    return(dataset)
-  }
-  
+
   lag.breaks <- (1:20)*24*wind.speed
 
   print(year(start.date))
