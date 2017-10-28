@@ -23,7 +23,7 @@ granger_causality <- function(x, y, lag = 3){
 
 gams.test <- function(dataset, k1 = 3){
   tryCatch({
-    model <- gam(log(y) ~ s(time, bs = "cr", k = k1) + x + weekdays(as.Date(date)), 
+    model <- gam(log(y) ~ s(time, bs = "cr", k = k1) + x, 
                    data = dataset, family = gaussian, na.action = na.omit)
     coeff <- summary(model)$p.coeff[2]
     p.value <- summary(model)$p.pv[2]
