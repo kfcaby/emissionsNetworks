@@ -190,7 +190,27 @@ createAdjacencyMatrix <- function(edges){
   return(network)
 }
 
-
+#This function returns some basic information about the output from the 
+#fitDailyPMmodels function
+edge_analysis <- function(edges){
+  network <- createAdjacencyMatrix(edges)
+  max.distance <- edges$max.distance[1]
+  print(paste("Number of edges in the network:", sum(edges$edge, na.rm = TRUE) , sep = " "))
+  print(paste("The edge density is:", round(sum(edges$edge, na.rm = TRUE)/sum(!is.na(edges$edge)),2), sep = " "))
+  print(paste("Percent of GAMS models failing:", 
+              round(100*(length(is.na(edges$edge)) - length(edges$distance > max.distance))/length(edges$distance < max.distance),2),
+              "%",sep = " "))
+  print("")
+  print("Power Plants")
+  print(paste("Total:", length(unique(edges$PP)), sep = " "))
+  print(paste("With at least one linked monitor:", length(unique(subset(edges, edge == 1)$PP)), sep = " "))
+  print(paste("Median number of linked monitors:", median(rowSums(network, na.rm = TRUE)) ,sep = " "))
+  print("")
+  print("Monitors")
+  print(paste("Total:", length(unique(edges$Monitor)), sep = " "))
+  print(paste("With at least one linked powerplant:", length(unique(subset(edges, edge == 1)$Monitor)), sep = " "))
+  print(paste("Median number of linked powerplants:", median(colSums(network, na.rm = TRUE)) ,sep = " "))
+}
   
   ##-----------------------------------------------------------------------##
   ##            Plot an Emissions Network                                  ##
