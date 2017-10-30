@@ -65,11 +65,25 @@ get_gams_model <- Vectorize(function(powerplant, monitor, emissions, PM, M_locat
     print(summary(model))
   }
   if(return.plots == TRUE){
+    
+    #US map
+    US <- map("state",fill=TRUE, plot=FALSE)
+    US.names <- US$names
+    US.IDs <- sapply(strsplit(US.names,":"),function(x) x[1])
+    US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
+    plot(US_poly_sp, xlim = c(-125,-68), ylim = c(26,50), main = "")
+    points(PP_locations[powerplant ,2:3], pch = 24, bg = "yellow", col = "black", lwd = 0.50, cex = 1)
+    points(M_locations[monitor ,2:3], pch = 21, bg = "green", col = "black", lwd = 0.50, cex = 1)
+    
     par(mfrow = c(3,1))
+    
+    #emissions time-series
     plot(emissions[powerplant,], type = 'o', main = powerplant, ylab = "SO2", 
          xlab = NA, ylim = c(0,max(emissions[powerplant,], na.rm = TRUE)))
+    #PM time-series
     plot(PM[monitor, ], type = 'o', main = monitor, ylab = "PM2.5", 
          xlab = NA, ylim = c(0, max(PM[monitor,], na.rm = TRUE)))
+    #model
     plot(model, residuals = TRUE, cex = 3)
     par(mfrow = c(1,1))
   }
