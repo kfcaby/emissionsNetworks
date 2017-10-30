@@ -176,6 +176,7 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations ,sta
   pairs$start.day <- start.day
   pairs$end.day <- end.day
   pairs$year <- year
+  pairs$wind.speed <- wind.speed
   
   print(paste("The number of edges is:",sum(pairs$edge,na.rm = TRUE) ,sep = " "))
   print(paste("Edge density is:",round(sum(pairs$edge,na.rm = TRUE)/sum(!is.na(pairs$edge)),2), sep = ""))
