@@ -32,30 +32,68 @@ gams.test <- function(dataset, k1 = 3){
   )
 }
 
-#
+# 
 
 logNA <- function(x){
   return(ifelse(x > 0, log(x), 0))
 }
 
+#function takes a vector of monitor IDs and powerplant IDs and returns
+#the gams model for each along with summary plots
+get_gams_model <- Vectorize(function(powerplant, monitor, emissions, PM, M_locations, PP_locations,
+                                     start.day = "06-01", end.day = "08-31", year = 2005, return.summary = TRUE,
+                                     return.plots = TRUE, wind.speed = 13, k1 = 5){
+  
+  lag.breaks <- (1:20)*24*wind.speed
+  
+  start.date <- as.Date(paste(year,"-",start.day, sep = ""))
+  end.date <- as.Date(paste(year,"-",end.day,sep = ""))
+  
+  #Subset emissions and PM by start and end date
+  emissions <- emissions[ ,as.Date(colnames(emissions)) >= start.date & as.Date(colnames(emissions)) <= end.date]
+  PM <- PM[ ,as.Date(colnames(PM)) >= start.date & as.Date(colnames(PM)) <= end.date]
+  
+  M_locations <- M_locations[rownames(PM), ]
+  PP_locations <- PP_locations[rownames(emissions),]
+  
+  distance <- distm(M_locations[monitor, c(2:3)],PP_locations[powerplant, c(2:3)])/1000
+  lag <- findInterval(distance,lag.breaks)
+  dataset <- make_dataset(emissions, PM, monitor, powerplant, lag)
+  model <- gam(log(y) ~ s(time, bs = "cr", k = k1) + x + weekdays(as.Date(date)), 
+               data = dataset, family = gaussian, na.action = na.omit)
+  if(return.summary == TRUE){
+    print(summary(model))
+  }
+  if(return.plots == TRUE){
+    par(mfrow = c(3,1))
+    plot(emissions[powerplant,], type = 'o', main = powerplant, ylab = "SO2", 
+         xlab = NA, ylim = c(0,max(emissions[powerplant,], na.rm = TRUE)))
+    plot(PM[monitor, ], type = 'o', main = monitor, ylab = "PM2.5", 
+         xlab = NA, ylim = c(0, max(PM[monitor,], na.rm = TRUE)))
+    plot(model, residuals = TRUE, cex = 3)
+    par(mfrow = c(1,1))
+  }
+  print(paste(powerplant, monitor, round(distance,2), lag, round(summary(model)$p.coeff[2],6), round(summary(model)$p.pv[2],6), sep = " "))
+  return(model)
+}, vectorize.args = c("powerplant","monitor"))
 
-fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations,start.day, end.day, 
+
+fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations ,start.day, end.day, 
                                  percent.of.powerplants = 100, alpha = 0.05, p.adjust.method = "BH",
                                  lag = "distance_dependent", k1 = 3, plot.pvalues = FALSE, wind.speed = 13,
                                  max.distance = 2000, include.west = FALSE){
-  
-#   start.day <- "06-01"
-#   end.day <- "08-31"
-#   year <- 2003
-#   percent.of.powerplants = 20
-#   lag = "distance_dependent"
-#   p.adjust.method = "BH"
-#   alpha = 0.05
-#   k1 = 3
-#   plot.pvalues = FALSE
-#   wind.speed = 13
-#   max.distance = 1000
-#   include.west = FALSE
+  # start.day <- "06-01"
+  # end.day <- "08-31"
+  # year <- 2005
+  # percent.of.powerplants = 20
+  # lag = "distance_dependent"
+  # p.adjust.method = "BH"
+  # alpha = 0.05
+  # k1 = 3
+  # plot.pvalues = FALSE
+  # wind.speed = 13
+  # max.distance = 1000
+  # include.west = FALSE
   require(mgcv)
   
   start.date <- as.Date(paste(year,"-",start.day, sep = ""))
