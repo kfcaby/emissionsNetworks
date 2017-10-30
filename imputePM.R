@@ -11,7 +11,6 @@ library(imputeTS)
 
 source("./functions_emissions_networks.R")
 
-
 load(file = "daily_emissions_facility_temperature.RData")
 setkey(M_locations, ID)
 setkey(PP_locations, ID)
@@ -33,6 +32,8 @@ imputePM <- function(monitorPM, plot.imputed = FALSE){
 }
 
 PM.imputed <- t(apply(PM, 1, function(x) imputePM(monitorPM = x)))
+
+colnames(PM.imputed) <- colnames(PM)
 
 #save(list = "PM.imputed", file = "PM.imputed.RData")
 
