@@ -189,10 +189,11 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations ,sta
 createAdjacencyMatrix <- function(edges){
   require(reshape2)
   network <- dcast(edges, PP ~ Monitor, value.var = "edge")
-  rownames(network) <- network$PP
+  PP <- network$PP
   network <- network[, -1]
   network <- as.matrix(network)
   network[is.na(network)] <- 0
+  rownames(network) <- as.character(PP)
   return(network)
 }
 
@@ -260,9 +261,7 @@ plotEmissionsNetwork <- function(edges, emissions, PM, PP_locations, M_locations
                               max.distance = 1000, main = ""){
  
   require(RColorBrewer)
-  
-  
-#   edges <- edges_copy[[6]]
+
 #   plot.type = "highest_degree"
 #   plot.percent.of.powerplants = 100
 #   plot.diagnostics = TRUE
