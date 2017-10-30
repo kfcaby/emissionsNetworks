@@ -218,6 +218,36 @@ edge_analysis <- function(edges){
   print(paste("Median number of linked powerplants:", median(colSums(network, na.rm = TRUE)) ,sep = " "))
 }
   
+#function to plot basic missingness information
+missingness_analysis <- function(edges, emissions, PM, M_locations, PP_locations){
+  
+  #Subset emissions and PM by start and end date
+  emissions <- emissions[ ,as.Date(colnames(emissions)) >= start.date & as.Date(colnames(emissions)) <= end.date]
+  PM <- PM[ ,as.Date(colnames(PM)) >= start.date & as.Date(colnames(PM)) <= end.date]
+  
+  #Remove powerplants with no emissions during the time period
+  emissions <- emissions[rowSums(emissions, na.rm = TRUE) > 0, ]
+  PM <- PM[rowSums(PM, na.rm = TRUE) > 0, ]
+  
+  
+  hist(rowSums(is.na(emissions)), main = "Number of missing emissions observations per power plant",
+       xlab = "Number of days missing", breaks = 50)
+  hist(rowSums(is.na(PM)), main = "Number of missing PM observations per monitor",
+       xlab = "Number of days missing", breaks = 50)
+  
+  #power plants with at least one linked monitor
+  PP_linked <- as.character(unique(subset(edges, edge == 1)$PP))
+  hist(rowSums(is.na(emissions[PP_linked,])), 
+       main = "Number of missing emissions observations per power plant \n with at least one linked monitor",
+       xlab = "Number of days missing", breaks = 10)
+  
+  #monitors with at least one linked powerplant
+  Monitors_linked <- as.character(unique(subset(edges, edge == 1)$Monitor))
+  hist(rowSums(is.na(PM[Monitors_linked,])), 
+       main = "Number of missing PM observations per monitor \n with at least one linked powerplant",
+       xlab = "Number of days missing", breaks = 10)
+}
+
   ##-----------------------------------------------------------------------##
   ##            Plot an Emissions Network                                  ##
   ##-----------------------------------------------------------------------##
