@@ -276,8 +276,7 @@ missingness_analysis <- function(edges, emissions, PM, M_locations, PP_locations
 plotEmissionsNetwork <- function(edges, emissions, PM, PP_locations, M_locations, 
                               plot.type = "highest_degree", plot.percent.of.powerplants = 100, 
                               plot.diagnostics = TRUE,
-                              plot.edges = TRUE, plot.legend = FALSE, 
-                              max.distance = 1000, main = ""){
+                              plot.edges = TRUE, plot.legend = FALSE, main = ""){
  
   require(RColorBrewer)
 
