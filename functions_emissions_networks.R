@@ -281,442 +281,79 @@ missingness_analysis <- function(edges, emissions, PM, M_locations, PP_locations
   ##            Plot an Emissions Network                                  ##
   ##-----------------------------------------------------------------------##
   
-
-plotEmissionsNetwork <- function(edges, emissions, PM, PP_locations, M_locations, 
-                              plot.type = "highest_degree", plot.percent.of.powerplants = 100, 
-                              plot.diagnostics = TRUE,
-                              plot.edges = TRUE, plot.legend = FALSE, main = ""){
- 
+plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = NULL, exposure.binary.cutoff = 0.80, num.colors = 10, plot.edges = TRUE,
+                                      main = " ", plot.diagnostics = TRUE){
   require(RColorBrewer)
-
-#   plot.type = "highest_degree"
-#   plot.percent.of.powerplants = 100
-#   plot.diagnostics = TRUE
-#   plot.edges = TRUE
-#   plot.legend = FALSE
   
-  network <- createAdjacencyMatrix(edges)
-  max.distance <- edges$max.distance[1]
-  
-  wind.speed <- 13 #kph
-  lag.breaks <- (1:20)*24*wind.speed
-  
-  if(!plot.type %in% c("highest_emitters", 
-                       "highest_degree")){
-    plot.type = "highest_emitters"
-    print("Invalid plot.type. Plotting highest_degree power plants")
-  }
-  
-  #make sure location data.table matches network adjacency matrix
-  PP_locations <- PP_locations[rownames(network),]
-  M_locations <- M_locations[colnames(network),]
-  emissions <- emissions[rownames(network),]
-  PM <- PM[colnames(network),]
-  
-  #calculate distances for data analysis
-  dist <- spDists(as.matrix(M_locations[,c(2,3)]),as.matrix(PP_locations[,c(2,3)]), longlat = TRUE)
-  colnames(dist) <- rownames(network)
-  rownames(dist) <- colnames(network)
-  dist_list <- melt(t(dist))
-  dist_list <- dist_list[order(dist_list$Var1,dist_list$Var2),]
-  
-  #convert network to long form and add lat/long data for plotting
-  diad_list <- melt(network)
-  diad_list <- merge(diad_list, PP_locations, by.x = "Var1", by.y = "ID")
-  diad_list <- merge(diad_list, M_locations, by.x = "Var2", by.y = "ID")
-  diad_list <- diad_list[order(diad_list$Var1,diad_list$Var2),]
-  diad_list$Distance <- dist_list$value
-  
-  
-  #find direction for data analysis purposes
-  diad_list$bearing <- bearing(cbind(diad_list$Longitude.x,diad_list$Latitude.x), cbind(diad_list$Longitude.y,diad_list$Latitude.y))
-  diad_list$bearing <- ifelse(diad_list$bearing < 0, diad_list$bearing + 360, diad_list$bearing)
-  angle_breaks <- seq(22.5,337.5, by = 45)
-  direction_ints <- findInterval(diad_list$bearing, angle_breaks)
-  diad_list$direction <- ifelse(direction_ints == 1, "NE",
-                                ifelse(direction_ints == 2, "E",
-                                       ifelse(direction_ints == 3, "SE",
-                                              ifelse(direction_ints == 4, "S",
-                                                     ifelse(direction_ints == 5, "SW",
-                                                            ifelse(direction_ints == 6, "W",
-                                                                   ifelse(direction_ints == 7, "NW","N")))))))
-  
-  # take only edges (as opposed to diads)
-  edge_list <- subset(diad_list, value == 1)
-  #indicator that distance from power plant to monitor is probably too long for there to be an edge
-  edge_list$lag <- findInterval(edge_list$Distance, lag.breaks)
-  
-  #distance plot for data analysis
-  #breaks <- c(50,100,200,300,400,seq(500,4500, by = 250))
-  breaks <- seq(0,max.distance, by = 250)
-  edge_prob_dist <- rep(0, length(breaks)-1)
-  for(b in 1:(length(breaks)-1)){
-    #number of edges
-    edge_sum <- sum(subset(diad_list, Distance > breaks[b] & Distance <= breaks[b+1])$value)
-    #possible edges
-    edge_total <- length(subset(diad_list, Distance > breaks[b] & Distance <= breaks[b+1])$value)
-    edge_prob_dist[b] <- edge_sum/edge_total
-  }
-  #plot function call is below
-  
-  #azimuth plot of data analysis
-  edge_prob_angle <- rep(0, 8)
-  directions <- c("N","NE", "E", "SE","S","SW","W","NW")
-  for(b in 1:8){
-    #number of edges
-    edge_sum <- sum(subset(diad_list, direction == directions[b])$value)
-    #possible edges
-    edge_total <- length(subset(diad_list, direction == directions[b])$value)
-    edge_prob_angle[b] <- edge_sum/edge_total
-  }
-  
-  #plot US Map
   US <- map("state",fill=TRUE, plot=FALSE)
   US.names <- US$names
   US.IDs <- sapply(strsplit(US.names,":"),function(x) x[1])
   US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
-  plot(US_poly_sp, xlim = c(-125,-68), ylim = c(26,50), main = main)
+  plot(US_poly_sp, xlim = c(-125,-68), ylim = c(26,50), main = "")
   
-  
-  
-  points(PP_locations[ ,2:3], pch = 24, bg = "yellow", col = "black", lwd = 0.50, cex = 0.50)
-  points(M_locations[ ,2:3], pch = 21, bg = "green", col = "black", lwd = 0.50, cex = 1)
-
-  if(plot.edges == TRUE & sum(network, na.rm = TRUE) > 0){
-      #assign colors based on lag
-      colors <- brewer.pal(n = 4, name = "RdYlBu")
-      edge_list$color.index <- 4 - edge_list$lag
-      edge_list$color.index <- ifelse(edge_list$color.index < 1, 1, edge_list$color.index)
+  #determine colors of monitors
+  if(is.na(exposure.type) || !exposure.type %in% c("binary","continuous")){
+    bg.monitor <- "green"
+    col.monitor <- "black"
+  } else{
+    if(exposure.type == "binary"){
       
-      segments(edge_list$Longitude.x,
-               edge_list$Latitude.x,
-               edge_list$Longitude.y,
-               edge_list$Latitude.y,
-               col = colors[edge_list$color.index],
-               lwd = 0.4)
-      if(plot.legend == TRUE){
-        legend(x = -79, y = 33, legend = c("0 day lag","1 day lag", "2 day lag", ">2 day lag"),
-               lty = 1, col = colors[length(colors):1], cex = 0.5)
-      }
+      #number of links
+      monitor_degree <- edges[, list(degree = sum(edge,na.rm = TRUE),
+                               possible = sum(distance < max.distance, na.rm = TRUE)),
+                               by = "Monitor"]
+      setkey(monitor_degree, Monitor)
+      monitor_degree[ , percent := degree/possible]
+      monitor_degree[ , percent := ifelse(is.na(percent), 0, percent)]
+      monitor_degree[ , High := ifelse(percent > quantile(percent, exposure.binary.cutoff, na.rm = TRUE),1,0)]
+      
+      
+      print(paste("The cutoff between high/low is:", quantile(monitor_degree$percent, exposure.binary.cutoff, na.rm = TRUE), sep = " "))
+      print(paste("The cutoff in terms of number of links is:", quantile(monitor_degree$degree, exposure.binary.cutoff, na.rm = TRUE), sep = " "))
+      
+      bg.monitor <- ifelse(monitor_degree$High == 1, "red","green")
+      col.monitor <- "black"
+    }
+    
+    if(exposure.type == "continuous"){
+      setkey(edges, Monitor)
+      rbPal <- colorRampPalette(c('green','red'))
+      exposure <- edges[J(unique(Monitor)), get(exposure.var), mult = "first"]
+      
+      bg.monitor = rbPal(num.colors)[as.numeric(cut(exposure, breaks = num.colors))]
+      col.monitor <- "black"
+    }
   }
   
+  #Plot the monitors and the power plants
+  setkey(edges, Monitor)
+  points(edges[J(unique(Monitor)), c("M.longitude","M.latitude"), mult = "first"],
+         pch = 21, bg = bg.monitor, col = col.monitor, lwd = 0.50, cex = 1) 
+  setkey(edges, PP)
+  points(edges[J(unique(PP)), c("PP.longitude","PP.latitude"), mult = "first"],
+         pch = 24, bg = "yellow", col = "black", lwd = 0.50, cex = 1) 
   
-  #plots
-  
-  if(plot.diagnostics == TRUE & sum(network, na.rm = TRUE) > 0){
-    #Plot 1 - observed edge probability vs distance
-    barplot(height = edge_prob_dist, space = 0, main = "Edge Prob vs Distance")
+  #plot the edges
+  if(plot.edges == TRUE & sum(edges$edge, na.rm = TRUE) > 0){
+    #assign colors based on lag
+    colors <- brewer.pal(n = 4, name = "RdYlBu")
+    color.index <- 4 - subset(edges,edge == 1)$lag
+    color.index <- ifelse(color.index < 1, 1, color.index)
+    
+    segments(subset(edges, edge == 1)$M.longitude,
+             subset(edges, edge == 1)$M.latitude,
+             subset(edges, edge == 1)$PP.longitude,
+             subset(edges, edge == 1)$PP.latitude,
+             col = colors[color.index],
+             lwd = 0.4)
+  }
+
+  if(plot.diagnostics == TRUE){
+    breaks <- seq(0,edges$max.distance[1], by = 250)
+    edges$dist.cat <- findInterval(edges$distance, breaks)
+    probs <- edges[ , list(sum(edge == 1,na.rm = TRUE)/sum(!is.na(edge))), by = "dist.cat"]
+    barplot(height = probs$V1, space = 0, main = "Edge Probability by Distance Category")
     axis(1, at = 0:(length(breaks)-1), labels = breaks)
-    
-    
-    #Plot 2 - observed edge probability by direction from PP to monitor
-#     barplot(edge_prob_angle, names.arg = directions, main = "Edge Prob by Edge Direction")
-    
-    #Plot 3 - observed degree of powerplant by powerplant size category
-#     degree <- rowSums(network, na.rm = TRUE)
-#     plot(logNA(rowSums(emissions, na.rm = TRUE))[degree > 1], log(degree)[degree > 1],
-#          xlab = "log(Total SO2 emissions)", ylab = "log(number of monitors linked)",
-#          main = "Emissions vs. Number of Edges")
-#     abline(lm(logNA(degree)[degree > 1] ~ logNA(rowSums(emissions, na.rm = TRUE))[degree > 1]),
-#            col = "blue", lty = 2)
-    #boxplot(logNA(degree) ~ pp.size, data = PP_locations, xlab = "power size category", ylab = "degree")
-   # print(summary(degree ~ pp.size))
   }
-  return()
 }
 
-
-plotHighLowMap <- function(edges, PP_locations, M_locations, 
-                           cutoff.perc = 0.80, main = ""){
-  network <- createAdjacencyMatrix(edges)
-  M_locations <- M_locations[colnames(network),]
-  PP_locations <- PP_locations[rownames(network),]
-  
-  max.distance <- edges$max.distance[1]
-  
-  numLinks <- colSums(network)
-  
-  distance <- spDists(as.matrix(PP_locations[,c(2,3)]),as.matrix(M_locations[,c(2,3)]), longlat = TRUE)
-  numPossibleLinks <- colSums(distance < max.distance)
-  
-  
-  High <- ifelse(numLinks/numPossibleLinks > quantile(numLinks/numPossibleLinks, cutoff.perc),1,0)
-  
-  print(paste("The cutoff between high/low is:", quantile(numLinks/numPossibleLinks, cutoff.perc), sep = " "))
-  print(paste("The cutoff in terms of number of links is:", quantile(numLinks, cutoff.perc), sep = " "))
-  
-  US <- map("state",fill=TRUE, plot=FALSE)
-  US.names <- US$names
-  US.IDs <- sapply(strsplit(US.names,":"),function(x) x[1])
-  US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
-  plot(US_poly_sp, xlim = c(-125,-68), ylim = c(26,50), main = main)
-  points(PP_locations[ ,2:3], pch = 24, bg = "yellow", col = "black", lwd = 0.50, cex = 0.25)
-  points(M_locations[ ,2:3], pch = 21, bg = ifelse(High == 1, "red","green"), col = "black", lwd = 0.50, cex = 1)
-}
-
-
-
-
-
-
-
-###OTHER CODE FROM BEFORE
-
-##-----------------------------------------------------------------------##
-##            Plot time-series for specific monitors/power plants        ##
-##-----------------------------------------------------------------------##
-
-# indices <- which(colnames(emissions) >= start.dates & colnames(emissions) <= end.dates)
-# 
-# plot(as.Date(colnames(emissions)[indices]),emissions["PP709", indices], 
-#      ylab = NA, xlab = NA, ylim = c(0,265), type = "o", cex.axis = 1.5,
-#      main = NA)
-# title("SO2", line = 0.5, cex.main = 2)
-# 
-# 
-# indices <- which(colnames(PM) >= start.dates & colnames(PM) <= end.dates)
-# 
-# plot(as.Date(colnames(PM)[indices]),PM["M13067-0003", indices], 
-#      ylab = NA, xlab = NA, type = "o", cex.axis = 1.5,
-#      main = NA, ylim = c(0,20))
-# title("PM", line = 0.5, cex.main = 2)
-
-
-##-----------------------------------------------------------------------##
-##            Clustering by Fitting Stochastic Block Model               ##
-##-----------------------------------------------------------------------##
-
-# emissions <- emissions.changes
-# PM <- PM.changes
-# 
-# #Fit a stochastic block model - bipartite network 
-# adjacency <- matrix(0, nrow = nrow(emissions) + nrow(PM), ncol = nrow(emissions) + nrow(PM))
-# diag(adjacency) <- 1
-# rownames(adjacency) <- c(rownames(emissions), rownames(PM))
-# colnames(adjacency) <- c(rownames(emissions), rownames(PM))
-# 
-# adjacency[(nrow(emissions)+1):nrow(adjacency),1:nrow(emissions)] <- network
-# adjacency[1:nrow(emissions),(nrow(emissions)+1):nrow(adjacency)] <- network
-# 
-# 
-# #remove isolates
-# adjacency <- adjacency[rowSums(adjacency) > 0, ]
-# adjacency <- adjacency[ ,colSums(adjacency) > 0]
-# 
-# start.time <- Sys.time()
-# blkmodel <- BM_bernoulli(membership_type = "SBM", adj = adjacency, verbosity = 0)
-# blkmodel$estimate()
-# Sys.time() -start.time
-# 
-# membership_probs <- blkmodel$memberships[[which.max(blkmodel$ICL)]]$Z
-# 
-# membership <- apply(membership_probs, 1, which.max)
-# 
-# #Make a map of the results with group memberships
-# #pdf("blockmodel_groups.pdf")
-# US <- map("state",fill=TRUE, plot=FALSE)
-# US.names <- US$names
-# US.IDs <- sapply(strsplit(US.names,":"),function(x) x[1])
-# US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
-# plot(US_poly_sp, xlim = c(-125,-68), ylim = c(26,50), main = NA)
-# 
-# points(PP_locations[,2:3], pch = 24, 
-#        bg = membership[1:nrow(emissions)], col = "black", cex = 2)
-# points(M_locations[,2:3], pch = 21, 
-#        bg = membership[(nrow(emissions)+1):(nrow(PM)+ nrow(emissions))], col = "black")
-# 
-# 
-# 
-# #Fit a stochastic block model - projection to one-mode network
-# 
-# network_proj <- t(network) %*% network
-# 
-# blkmodel_uni <- BM_poisson(membership_type = "SBM", adj = network_proj)
-# blkmodel_uni$estimate()
-# 
-# membership_uni_probs <- blkmodel_uni$memberships[[which.max(blkmodel_uni$ICL)]]$Z
-# #membership_uni_probs <- blkmodel_uni$memberships[[10]]$Z
-# 
-# membership_uni <- apply(membership_uni_probs, 1, which.max)
-# 
-# US <- map("state",fill=TRUE, plot=FALSE)
-# US.names <- US$names
-# US.IDs <- sapply(strsplit(US.names,":"),function(x) x[1])
-# US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
-# plot(US_poly_sp, xlim = c(-125,-68), ylim = c(26,50), main = NA)
-# points(M_locations[,2:3], pch = 19, col = as.integer(membership_uni))
-# text(M_locations[,2:3], labels = as.character(membership_uni),
-#      pos = 3, cex = 0.75)
-# 
-# 
-# ##-----------------------------------------------------------------------##
-# ##           Plot Specific Power plants/monitors                         ##
-# ##-----------------------------------------------------------------------##
-# 
-# PP_list <- c("PP3140_3")
-# M_list <-  c("M42043-0401")
-# 
-# US <- map("state",fill=TRUE, plot=FALSE)
-# US.names <- US$names
-# US.IDs <- sapply(strsplit(US.names,":"),function(x) x[1])
-# US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
-# plot(US_poly_sp, xlim = c(-125,-68), ylim = c(26,50), main = NA)
-# points(PP_locations[ID %in% PP_list,2:3], pch = 24, bg = "yellow", col = "black", cex = 1.5)
-# points(M_locations[ID %in% M_list,2:3], pch = 21, bg = "green", col = "black")
-# 
-# start.time <- Sys.time()
-# granger.test(cbind(emissions[1,],PM[1,]), p =1)
-# Sys.time() - start.time
-# 
-# ##-----------------------------------------------------------------------##
-# ##            Plot a Time-Series decomp                                  ##
-# ##-----------------------------------------------------------------------##
-# 
-# #Plot a PM decomp
-# x <- PM.impute[8,]
-# x <- as.numeric(x)
-# x <- ts(x, frequency = 365)
-# fit <- stl(x, t.window = 4*365, s.window = "periodic",robust = TRUE)
-# plot(fit)
-# 
-# #Plot an emissions decomp
-# x <- emissions.impute[60,]
-# x <- as.numeric(x)
-# #x <- na.kalman(x)
-# x <- ts(x, frequency = 365)
-# fit <- stl(x, t.window = 6*30, s.window = "periodic",robust = TRUE)
-# plot(fit)
-# 
-# ##-----------------------------------------------------------------------##
-# ##            Plot Specific Monitors                                     ##
-# ##-----------------------------------------------------------------------##
-# 
-# par(mfrow = c(1,1))
-# monitorIDs <- c("M53061-1007","M49005-0004", "M16079-0017","M51059-0030", "M06037-4004")
-# 
-# US <- map("state",fill=TRUE, plot=FALSE)
-# US.names <- US$names
-# US.IDs <- sapply(strsplit(US.names,":"),function(x) x[1])
-# US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
-# plot(US_poly_sp, xlim = c(-125,-68), ylim = c(26,50), main = NA)
-# 
-# points(M_locations[monitorIDs,2:3], pch = 21, bg = "green", col = "black")
-# 
-# ##-----------------------------------------------------------------------##
-# ##            Clustering Monitors Using Correlations                      ##
-# ##-----------------------------------------------------------------------##
-# 
-# # Try clustering based on correlations in PM of monitors
-# num_clusters = 5 #set to same as above analysis usually
-# 
-# 
-# # Convert to ts object and cluster
-# PM.ts <- t(apply(PM.impute,1,ts, frequency = 365))
-# PM.dis <- diss(PM.ts, "COR")
-# PM.hclust <- cutree(hclust(PM.dis), k = num_clusters)
-# 
-# #cluster.evaluation(PM.hclust,membership_uni)
-# 
-# US <- map("state",fill=TRUE, plot=FALSE)
-# US.names <- US$names
-# US.IDs <- sapply(strsplit(US.names,":"),function(x) x[1])
-# US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
-# plot(US_poly_sp, xlim = c(-125,-68), ylim = c(26,50), main = NA)
-# points(M_locations[,2:3], pch = 19, col = as.integer(PM.hclust))
-# text(M_locations[,2:3], labels = as.character(PM.hclust),
-#      pos = 3, cex = 0.75)
-# 
-# ##-----------------------------------------------------------------------##
-# ##            Clustering Monitors/Power Plants Using Correlations        ##
-# ##-----------------------------------------------------------------------##
-# 
-# # Try clustering based on correlations in PM of monitors
-# num_clusters = 5 #set to same as above analysis usually
-# 
-# data.impute <- rbind(PM.impute, emissions.impute)
-# 
-# # Convert to ts object and cluster
-# data.ts <- t(apply(data.impute,1,ts, frequency = 365))
-# data.dis <- diss(data.ts, "COR")
-# data.hclust <- cutree(hclust(data.dis), k = num_clusters)
-# 
-# PM.hclust <- data.hclust[1:nrow(PM)]
-# emissions.hclust <- data.hclust[(nrow(PM)+1):(nrow(PM)+ nrow(emissions))]
-# 
-# #cluster.evaluation(PM.hclust,membership_uni)
-# 
-# US <- map("state",fill=TRUE, plot=FALSE)
-# US.names <- US$names
-# US.IDs <- sapply(strsplit(US.names,":"),function(x) x[1])
-# US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
-# plot(US_poly_sp, xlim = c(-125,-68), ylim = c(26,50), main = NA)
-# points(M_locations[,2:3], pch = 19, col = as.integer(PM.hclust))
-# text(M_locations[,2:3], labels = as.character(PM.hclust),
-#      pos = 3, cex = 0.75)
-# points(PP_locations[,2:3], pch = 17, col = as.integer(emissions.hclust))
-# text(PP_locations[,2:3], labels = as.character(emissions.hclust),
-#      pos = 3, cex = 0.75)
-# 
-# 
-# ##-----------------------------------------------------------------------##
-# ##            Time-series plots of emissions and PM                      ##
-# ##-----------------------------------------------------------------------##
-# 
-# #Plot a sample of the power plants
-# plot_samp <- sample(1:nrow(emissions),min(20,nrow(emissions)))
-# 
-# #print time-series plots - different scale
-# par(mfrow = c(2,1))
-# for(i in 1:nrow(emissions)){
-#   plot(as.Date(colnames(emissions)),emissions[i,], type = "o",
-#        axes = TRUE, main = rownames(emissions)[i],
-#        xlab = NA, ylab = NA)
-# }
-# par(mfrow = c(1,1))
-# 
-# #Plot a sample of the monitors
-# plot_samp <- sample(1:nrow(PM),min(20,nrow(PM)))
-# 
-# par(mfrow = c(2,1))
-# for(i in 1:nrow(PM)){
-#   plot(as.Date(colnames(PM)),PM[i,], type = "o",
-#        axes = TRUE, main = rownames(PM)[i],
-#        xlab = NA, ylab = NA)
-# }
-# par(mfrow = c(1,1))
-# 
-# 
-# #M_list = paste("M",M_list,sep = "")
-# 
-# # for(i in M_list){
-# #   plot(as.Date(colnames(PM_all)),PM_all[i,], type = "o",
-# #        axes = TRUE, main = i,
-# #        xlab = NA, ylab = NA)
-# # }
-# 
-# 
-# ##-----------------------------------------------------------------------##
-# ##            Time-series decomp of Changes in PM and Emissions          ##
-# ##-----------------------------------------------------------------------##
-# 
-# # emissions.changes.rem <- t(apply(emissions.changes, 1, ts_remainder, t.window = 31,
-# #                                s.window = "periodic", robust = TRUE))
-# # 
-# # PM.changes.rem<- t(apply(PM.changes, 1, ts_remainder, t.window = 31,
-# #                         s.window = "periodic", robust = TRUE))
-# 
-# 
-# ##-----------------------------------------------------------------------##
-# ##            Plot US Map of rawdata                                     ##
-# ##-----------------------------------------------------------------------##
-# 
-# par(mfrow = c(1,1))
-# US <- map("state",fill=TRUE, plot=FALSE)
-# US.names <- US$names
-# US.IDs <- sapply(strsplit(US.names,":"),function(x) x[1])
-# US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
-# plot(US_poly_sp, xlim = c(-125,-68), ylim = c(26,50), main = NA)
-# 
-# points(PP_locations[ ,2:3], pch = 24, bg = "yellow", col = "black", cex = 1.5)
-# points(M_locations[ ,2:3], pch = 21, bg = "green", col = "black")
-# 
