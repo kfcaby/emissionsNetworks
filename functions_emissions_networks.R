@@ -1,5 +1,13 @@
 # Basic functions for manipulating emissions/PM time series and creating an emissions network
 
+#convert a ZIP code from 3-digit to 5-digit format
+convertZip <- function(zip){
+  temp_zip<-formatC(zip, width = 5, format = "d", flag = "0")
+  zipcode<-unlist(lapply(temp_zip, function(x) as.numeric(paste(strsplit(as.character(x),"")[[1]],collapse=""))))
+  zipcode<-formatC(zipcode, width = 5, format = "d", flag = "0")
+  return(zipcode)
+}
+
 make_dataset <- function(emissions, PM, monitor, powerplant, lag){
   y <- emissions[powerplant, ]
   x <- PM[monitor, ]
