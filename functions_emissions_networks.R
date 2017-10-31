@@ -151,6 +151,10 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations ,sta
   rownames(pairs) <- rownames(PM)
   pairs <- melt(t(pairs), value.name = "distance")
   colnames(pairs)[1:2] <- c("PP","Monitor")
+  pairs$PP <- as.character(pairs$PP)
+  pairs$Monitor <- as.character(pairs$Monitor)
+  
+  #compute the lag 
   pairs$lag <- ifelse(pairs$distance < max.distance, findInterval(pairs$distance,lag.breaks), NA)
   pairs <- data.table(pairs)
   
@@ -197,6 +201,11 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations ,sta
   pairs$year <- year
   pairs$wind.speed <- wind.speed
   pairs$knots <- k1
+  
+  pairs$PP.longitude <- PP_locations[pairs$PP,]$Longitude
+  pairs$PP.latitude <- PP_locations[pairs$PP,]$Latitude
+  pairs$M.longitude <- M_locations[pairs$Monitor,]$Longitude
+  pairs$M.latitude <- M_locations[pairs$Monitor,]$Latitude
   
   print(paste("The number of edges is:",sum(pairs$edge,na.rm = TRUE) ,sep = " "))
   print(paste("Edge density is:",round(sum(pairs$edge,na.rm = TRUE)/sum(!is.na(pairs$edge)),2), sep = ""))
