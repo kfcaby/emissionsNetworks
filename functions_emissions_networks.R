@@ -137,9 +137,6 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations ,sta
   emissions <- subset(emissions, rowSums(is.na(emissions)) < ncol(emissions))
   PP_locations <- subset(PP_locations, ID %in% rownames(emissions))
   
-  #Remove observations with mostly missing obs
-  n = dim(PM)[2]
-  PM <- PM[rowSums(!is.na(PM)) > 0.67*n, ]
   M_locations <- M_locations[rownames(PM),]
   
   #Remove observations in the west
