@@ -4,6 +4,8 @@
 plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgPM", exposure.binary.cutoff = 0.80, num.colors = 10, plot.edges = TRUE,
                                  main = " ", plot.diagnostics = TRUE){
   require(RColorBrewer)
+  require(maps)
+  require(maptools)
   
   US <- map("state",fill=TRUE, plot=FALSE)
   US.names <- US$names
