@@ -1,5 +1,6 @@
  
-
+# exposure.type can be NA, continuous, binary
+# exposure.var can be avgPM, inmapPM, gams.coeff, edge
 plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = NULL, exposure.binary.cutoff = 0.80, num.colors = 10, plot.edges = TRUE,
                                  main = " ", plot.diagnostics = TRUE){
   require(RColorBrewer)
@@ -36,9 +37,14 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = NULL,
     
     if(exposure.type == "continuous"){
       setkey(edges, Monitor)
-      rbPal <- colorRampPalette(c('green','red'))
-      exposure <- edges[J(unique(Monitor)), get(exposure.var), mult = "first"]
-      
+      rbPal <- colorRampPalette(c('white','black'))
+      if(exposure.var == "avgPM"){
+        exposure <- edges[J(unique(Monitor)), get(exposure.var), mult = "first"]
+      }
+      if(exposure.var %in% c("inmapPM", "gams.coeff", "edge")){
+        exposure <- edges[ , sum(get(exposure.var), na.rm = TRUE), by = "Monitor"]$V1
+      }
+      #exposure <- logNA(exposure)
       bg.monitor = rbPal(num.colors)[as.numeric(cut(exposure, breaks = num.colors))]
       col.monitor <- "black"
     }
