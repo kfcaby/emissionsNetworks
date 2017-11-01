@@ -213,7 +213,12 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations ,sta
   pairs[ , emissions.NAdays := rowSums(is.na(emissions[PP,]))]
   pairs[ , total.days := as.numeric(end.date - start.date)]
   
-  setkey(pairs, Monitor)
+  setkey(pairs, Monitor, PP)
+  
+  #add InMAP exposure
+  inmap <- fread(file = "inmapPM.csv")[ , V1 := NULL]
+  setkey(inmap, Monitor, PP)
+  pairs[ , inmapPM := inmap[.(pairs$Monitor,pairs$PP),"inmapPM"]]
   
   print(paste("The number of edges is:",sum(pairs$edge,na.rm = TRUE) ,sep = " "))
   print(paste("Edge density is:",round(sum(pairs$edge,na.rm = TRUE)/sum(!is.na(pairs$edge)),2), sep = ""))
