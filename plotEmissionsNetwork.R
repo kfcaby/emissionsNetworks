@@ -1,7 +1,7 @@
  
 # exposure.type can be NA, continuous, binary
-# exposure.var can be avgPM, inmapPM, gams.coeff, edge
-plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "inmapPM", exposure.binary.cutoff = 0.80, num.colors = 10, plot.edges = TRUE,
+# exposure.var can be avgPM, inmapPM, gams.coeff, num_edges
+plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgPM", exposure.binary.cutoff = 0.80, num.colors = 10, plot.edges = TRUE,
                                  main = " ", plot.diagnostics = TRUE){
   require(RColorBrewer)
   
@@ -17,52 +17,49 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "inma
     col.monitor <- "black"
     pch.monitor <- 21
   } else{
-    if(exposure.type == "binary"){
-      
-      #number of links
+    setkey(edges, Monitor)
+    rbPal <- colorRampPalette(c('white','black'))
+    
+    if(exposure.var == "avgPM"){
+      exposure <- edges[J(unique(Monitor)), get(exposure.var), mult = "first"]
+    }
+    
+    if(exposure.var %in% c("inmapPM", "gams.coeff")){
+      exposure <- edges[ , sum(get(exposure.var), na.rm = TRUE), by = "Monitor"]$V1
+    }
+    
+    if(exposure.var == "num_edges"){
       monitor_degree <- edges[, list(degree = sum(edge,na.rm = TRUE),
                                      possible = sum(distance < max.distance, na.rm = TRUE)),
                               by = "Monitor"]
       setkey(monitor_degree, Monitor)
-      monitor_degree[ , percent := degree/possible]
-      #monitor_degree[ , percent := ifelse(is.na(percent), 0, percent)]
-      monitor_degree[ , High := ifelse(is.na(percent), 0, 
-                                       ifelse(percent >= quantile(percent, 
-                                                                 exposure.binary.cutoff, na.rm = TRUE) & percent > 0,
-                                              1,0))]
-      
-      
-      print(paste("The cutoff between high/low is:", quantile(monitor_degree$percent, exposure.binary.cutoff, na.rm = TRUE), sep = " "))
-      print(paste("The cutoff in terms of number of links is:", quantile(monitor_degree$degree, exposure.binary.cutoff, na.rm = TRUE), sep = " "))
-      
-      bg.monitor <- ifelse(monitor_degree$High == 1, "red","green")
-      col.monitor <- "black"
-      pch.monitor <- ifelse(is.na(monitor_degree$percent), 4, 21)
+      exposure <- monitor_degree[ , percent := degree/possible]$percent
     }
     
     if(exposure.type == "continuous"){
-      setkey(edges, Monitor)
-      rbPal <- colorRampPalette(c('white','black'))
-      if(exposure.var == "avgPM"){
-        exposure <- edges[J(unique(Monitor)), get(exposure.var), mult = "first"]
-      }
-      if(exposure.var %in% c("inmapPM", "gams.coeff", "edge")){
-        exposure <- edges[ , sum(get(exposure.var), na.rm = TRUE), by = "Monitor"]$V1
-      }
       #exposure <- logNA(exposure)
       bg.monitor = rbPal(num.colors)[as.numeric(cut(exposure, breaks = num.colors))]
       col.monitor <- "black"
       pch.monitor <- ifelse(is.na(exposure), 4, 21)
     }
+    if(exposure.type == "binary"){
+      
+      High <- ifelse(exposure > quantile(exposure, exposure.binary.cutoff, na.rm = TRUE), 1, 0)
+      
+      bg.monitor <- ifelse(High == 1 | is.na(High), "red","green")
+      col.monitor <- "black"
+      pch.monitor <- ifelse(is.na(High), 4, 21)
+    }
   }
   
   #Plot the monitors and the power plants
+  setkey(edges, PP)
+  points(edges[J(unique(PP)), c("PP.longitude","PP.latitude"), mult = "first"],
+         pch = 24, bg = "yellow", col = "black", lwd = 0.50, cex = 0.5) 
   setkey(edges, Monitor)
   points(edges[J(unique(Monitor)), c("M.longitude","M.latitude"), mult = "first"],
          pch = pch.monitor, bg = bg.monitor, col = col.monitor, lwd = 0.50, cex = 1) 
-  setkey(edges, PP)
-  points(edges[J(unique(PP)), c("PP.longitude","PP.latitude"), mult = "first"],
-         pch = 24, bg = "yellow", col = "black", lwd = 0.50, cex = 1) 
+  
   
   #plot the edges
   if(plot.edges == TRUE & sum(edges$edge, na.rm = TRUE) > 0){
