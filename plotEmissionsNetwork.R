@@ -1,7 +1,7 @@
  
 # exposure.type can be NA, continuous, binary
 # exposure.var can be avgPM, inmapPM, gams.coeff, edge
-plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = NULL, exposure.binary.cutoff = 0.80, num.colors = 10, plot.edges = TRUE,
+plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "inmapPM", exposure.binary.cutoff = 0.80, num.colors = 10, plot.edges = TRUE,
                                  main = " ", plot.diagnostics = TRUE){
   require(RColorBrewer)
   
@@ -15,6 +15,7 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = NULL,
   if(is.na(exposure.type) || !exposure.type %in% c("binary","continuous")){
     bg.monitor <- "green"
     col.monitor <- "black"
+    pch.monitor <- 21
   } else{
     if(exposure.type == "binary"){
       
@@ -24,8 +25,11 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = NULL,
                               by = "Monitor"]
       setkey(monitor_degree, Monitor)
       monitor_degree[ , percent := degree/possible]
-      monitor_degree[ , percent := ifelse(is.na(percent), 0, percent)]
-      monitor_degree[ , High := ifelse(percent > quantile(percent, exposure.binary.cutoff, na.rm = TRUE),1,0)]
+      #monitor_degree[ , percent := ifelse(is.na(percent), 0, percent)]
+      monitor_degree[ , High := ifelse(is.na(percent), 0, 
+                                       ifelse(percent >= quantile(percent, 
+                                                                 exposure.binary.cutoff, na.rm = TRUE) & percent > 0,
+                                              1,0))]
       
       
       print(paste("The cutoff between high/low is:", quantile(monitor_degree$percent, exposure.binary.cutoff, na.rm = TRUE), sep = " "))
@@ -33,6 +37,7 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = NULL,
       
       bg.monitor <- ifelse(monitor_degree$High == 1, "red","green")
       col.monitor <- "black"
+      pch.monitor <- ifelse(is.na(monitor_degree$percent), 4, 21)
     }
     
     if(exposure.type == "continuous"){
@@ -47,13 +52,14 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = NULL,
       #exposure <- logNA(exposure)
       bg.monitor = rbPal(num.colors)[as.numeric(cut(exposure, breaks = num.colors))]
       col.monitor <- "black"
+      pch.monitor <- ifelse(is.na(exposure), 4, 21)
     }
   }
   
   #Plot the monitors and the power plants
   setkey(edges, Monitor)
   points(edges[J(unique(Monitor)), c("M.longitude","M.latitude"), mult = "first"],
-         pch = 21, bg = bg.monitor, col = col.monitor, lwd = 0.50, cex = 1) 
+         pch = pch.monitor, bg = bg.monitor, col = col.monitor, lwd = 0.50, cex = 1) 
   setkey(edges, PP)
   points(edges[J(unique(PP)), c("PP.longitude","PP.latitude"), mult = "first"],
          pch = 24, bg = "yellow", col = "black", lwd = 0.50, cex = 1) 
