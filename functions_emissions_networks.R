@@ -2,6 +2,10 @@
 
 source(file = "fitDailyPMmodels.R")
 source(file = "plotEmissionsNetwork.R")
+load(file = "daily_emissions_facility_temperature.RData")
+setkey(M_locations, ID)
+setkey(PP_locations, ID)
+
 
 #convert a ZIP code from 3-digit to 5-digit format
 convertZip <- function(zip){
