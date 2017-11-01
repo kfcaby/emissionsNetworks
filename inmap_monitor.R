@@ -46,7 +46,11 @@ inmap_monitor[, zip := NULL]
 inmap_monitor <- as.matrix(inmap_monitor)
 rownames(inmap_monitor) <- zip_monitor_linkage$ID
 
-write.csv(inmap_monitor, file = "inmap_monitor.csv")
+inmap_long <- data.table(melt(inmap_monitor))
+colnames(inmap_long) <- c("Monitor","PP", "inmapPM")
+head(inmap_long)
+
+write.csv(inmap_long, file = "inmapPM.csv")
 
 #FINISH THIS TOMORROW
 
