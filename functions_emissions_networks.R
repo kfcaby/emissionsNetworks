@@ -207,6 +207,14 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations ,sta
   pairs$M.longitude <- M_locations[pairs$Monitor,]$Longitude
   pairs$M.latitude <- M_locations[pairs$Monitor,]$Latitude
   
+  pairs[ , avgPM := rowMeans(PM[Monitor,], na.rm = TRUE)]
+  pairs[ , avgemissions := rowMeans(emissions[PP ,], na.rm = TRUE)]
+  pairs[ , PM.NAdays := rowSums(is.na(PM[Monitor,]))]
+  pairs[ , emissions.NAdays := rowSums(is.na(emissions[PP,]))]
+  pairs[ , total.days := as.numeric(end.date - start.date)]
+  
+  setkey(pairs, Monitor)
+  
   print(paste("The number of edges is:",sum(pairs$edge,na.rm = TRUE) ,sep = " "))
   print(paste("Edge density is:",round(sum(pairs$edge,na.rm = TRUE)/sum(!is.na(pairs$edge)),2), sep = ""))
 
