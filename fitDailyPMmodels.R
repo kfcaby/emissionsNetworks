@@ -104,7 +104,7 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations ,sta
   coeff[!is.na(pairs$lag)] <- gams.results[1,]
   p.value[!is.na(pairs$lag)] <- gams.results[2,]
   
-  pairs$coeff <- coeff
+  pairs$gams.coeff <- coeff
   pairs$p.value <- p.value
   
   print("Model fitting complete:")
@@ -117,7 +117,7 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations ,sta
   pairs$p.value_adj <- adj 
   
   #edges in network
-  pairs$edge <- ifelse(pairs$p.value_adj <= alpha & pairs$coeff > 0, 1, 0)
+  pairs$edge <- ifelse(pairs$p.value_adj <= alpha & pairs$gams.coeff > 0, 1, 0)
   
   pairs$max.distance <- max.distance
   
