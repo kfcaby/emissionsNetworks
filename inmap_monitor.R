@@ -50,7 +50,8 @@ inmap_long <- data.table(melt(inmap_monitor))
 colnames(inmap_long) <- c("Monitor","PP", "inmapPM")
 head(inmap_long)
 
-write.csv(inmap_long, file = "inmapPM.csv")
+#write.csv(inmap_long, file = "inmapPM.csv")
 
-#FINISH THIS TOMORROW
+
+
 
