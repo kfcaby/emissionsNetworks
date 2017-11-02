@@ -17,7 +17,8 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
   if(is.na(exposure.type) || !exposure.type %in% c("binary","continuous")){
     bg.monitor <- "green"
     col.monitor <- "black"
-    pch.monitor <- 21
+    setkey(edges, Monitor)
+    pch.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),4,21)
   } else{
     setkey(edges, Monitor)
     rbPal <- colorRampPalette(c('white','black'))
@@ -43,6 +44,10 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
       bg.monitor = rbPal(num.colors)[as.numeric(cut(exposure, breaks = num.colors))]
       col.monitor <- "black"
       pch.monitor <- ifelse(is.na(exposure), 4, 21)
+      if(exposure.var %in% c("num_edges","gams.coeff")){
+        setkey(edges, Monitor)
+        pch.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),4,21)
+      }
     }
     if(exposure.type == "binary"){
       
@@ -51,6 +56,10 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
       bg.monitor <- ifelse(High == 1 | is.na(High), "red","green")
       col.monitor <- "black"
       pch.monitor <- ifelse(is.na(High), 4, 21)
+      if(exposure.var %in% c("num_edges","gams.coeff")){
+        setkey(edges, Monitor)
+        pch.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),4,21)
+      }
     }
   }
   
