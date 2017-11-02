@@ -24,7 +24,10 @@ logNA <- function(x){
 get_gams_model <- Vectorize(function(powerplant, monitor, emissions, PM, M_locations, PP_locations,
                                      start.day = "06-01", end.day = "08-31", year = 2005, return.summary = TRUE,
                                      return.plots = TRUE, wind.speed = 13, k1 = 5){
-  
+  require(geosphere)
+  require(mgcv)
+  require(maps)
+  require(maptools)
   lag.breaks <- (1:20)*24*wind.speed
   
   start.date <- as.Date(paste(year,"-",start.day, sep = ""))
@@ -65,7 +68,7 @@ get_gams_model <- Vectorize(function(powerplant, monitor, emissions, PM, M_locat
     plot(PM[monitor, ], type = 'o', main = monitor, ylab = "PM2.5", 
          xlab = NA, ylim = c(0, max(PM[monitor,], na.rm = TRUE)))
     #model
-    plot(model, residuals = TRUE, cex = 3)
+    plot(model, residuals = TRUE, cex = 3, xlim = c(0, end.date - start.date))
     par(mfrow = c(1,1))
   }
   #print(paste(powerplant, monitor, round(distance,2), lag, round(summary(model)$p.coeff[2],6), round(summary(model)$p.pv[2],6), sep = " "))
@@ -91,18 +94,23 @@ edge_analysis <- function(edges){
   network <- createAdjacencyMatrix(edges)
   max.distance <- edges$max.distance[1]
   print(paste("Number of edges in the network:", sum(edges$edge, na.rm = TRUE) , sep = " "))
+  print(paste("Number of possible edges in the network:", nrow(edges) , sep = " "))
   print(paste("The edge density is:", round(sum(edges$edge, na.rm = TRUE)/sum(!is.na(edges$edge)),2), sep = " "))
   print(paste("Percent of GAMS models failing:", 
               round(100*(length(is.na(edges$edge)) - length(edges$distance > max.distance))/length(edges$distance < max.distance),2),
               "%",sep = " "))
   print("")
+  setkey(edges,PP)
   print("Power Plants")
   print(paste("Total:", length(unique(edges$PP)), sep = " "))
+  print(paste("With at least some emissions:", sum(!is.na(edges[J(unique(PP)), "avgemissions", mult = "first"])), sep = " "))
   print(paste("With at least one linked monitor:", length(unique(subset(edges, edge == 1)$PP)), sep = " "))
   print(paste("Median number of linked monitors:", median(rowSums(network, na.rm = TRUE)) ,sep = " "))
   print("")
+  setkey(edges,Monitor)
   print("Monitors")
   print(paste("Total:", length(unique(edges$Monitor)), sep = " "))
+  print(paste("With at least one PM measurement:", sum(!is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"])), sep = " "))
   print(paste("With at least one linked powerplant:", length(unique(subset(edges, edge == 1)$Monitor)), sep = " "))
   print(paste("Median number of linked powerplants:", median(colSums(network, na.rm = TRUE)) ,sep = " "))
 }
