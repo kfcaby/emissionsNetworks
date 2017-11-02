@@ -11,7 +11,7 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
   US.names <- US$names
   US.IDs <- sapply(strsplit(US.names,":"),function(x) x[1])
   US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
-  plot(US_poly_sp, xlim = c(-125,-68), ylim = c(26,50), main = "")
+  plot(US_poly_sp, xlim = c(-125,-68), ylim = c(26,50), main = main)
   
   #determine colors of monitors
   if(is.na(exposure.type) || !exposure.type %in% c("binary","continuous")){
