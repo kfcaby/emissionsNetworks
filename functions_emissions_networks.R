@@ -68,7 +68,7 @@ get_gams_model <- Vectorize(function(powerplant, monitor, emissions, PM, M_locat
     plot(model, residuals = TRUE, cex = 3)
     par(mfrow = c(1,1))
   }
-  print(paste(powerplant, monitor, round(distance,2), lag, round(summary(model)$p.coeff[2],6), round(summary(model)$p.pv[2],6), sep = " "))
+  #print(paste(powerplant, monitor, round(distance,2), lag, round(summary(model)$p.coeff[2],6), round(summary(model)$p.pv[2],6), sep = " "))
   return(model)
 }, vectorize.args = c("powerplant","monitor"))
 
