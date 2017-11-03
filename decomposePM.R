@@ -11,9 +11,8 @@ waveletDecomposition <- function(data, numLevels, lowest.level){
   
   return(lowfreq)
 }
-s
+
 decomposePM <- function(PM, M_locations, numLevels, lowest.level, include.west = TRUE){
-  
   M_locations <- M_locations[rownames(PM), ]
   
   if(include.west == FALSE){
