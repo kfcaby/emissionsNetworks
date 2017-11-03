@@ -3,6 +3,12 @@
 .RData
 .Ruserdata
 collapseRows_NEW.R
-daily_emissions_facility_temperature.RData
-.csv
+*.csv
 .jpg
+tutorialFunctions.R
+meeting2Nov.R
+metaAnalysisData.RData
+fit_emissions_networks.R
+daily_emissions_facility_temperature.RData
+tutorialFunctions.R
+oldcode.R
