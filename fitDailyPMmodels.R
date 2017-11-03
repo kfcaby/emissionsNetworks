@@ -32,7 +32,7 @@ gams.test <- function(dataset, k1 = 3){
     coeff <- summary(model)$p.coeff[2]
     p.value <- summary(model)$p.pv[2]
     return(c(coeff,p.value))
-  }, error = function(err) return(NA)
+  }, error = function(err) return(rep(NA,2))
   )
 }
 
