@@ -6,12 +6,15 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
   require(RColorBrewer)
   require(maps)
   require(maptools)
-  
+  dft <- par("mar")
+  par(mar = c(0,0,0,0))
   US <- map("state",fill=TRUE, plot=FALSE)
   US.names <- US$names
   US.IDs <- sapply(strsplit(US.names,":"),function(x) x[1])
   US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
-  plot(US_poly_sp, xlim = c(-125,-68), ylim = c(26,50), main = main)
+  plot(US_poly_sp)
+  title(main, line = -3)
+  
   
   #determine colors of monitors
   if(is.na(exposure.type) || !exposure.type %in% c("binary","continuous")){
@@ -94,5 +97,6 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
     barplot(height = probs$V1, space = 0, main = "Edge Probability by Distance Category")
     axis(1, at = 0:(length(breaks)-1), labels = breaks)
   }
+  par(mar = dft)
 }
 
