@@ -42,6 +42,7 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations ,sta
                              max.distance = 2000, include.west = FALSE){
 
   require(mgcv)
+  require(geosphere)
   
   start.date <- as.Date(paste(year,"-",start.day, sep = ""))
   end.date <- as.Date(paste(year,"-",end.day,sep = ""))
@@ -139,6 +140,9 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations ,sta
   pairs[ , total.days := as.numeric(end.date - start.date)]
   
   setkey(pairs, Monitor, PP)
+  
+  pairs$bearing <- bearing(cbind(pairs$PP.longitude,pairs$PP.latitude), cbind(pairs$M.longitude,pairs$M.latitude))
+  pairs$bearing <- ifelse(pairs$bearing < 0, pairs$bearing + 360, pairs$bearing)
   
   #add InMAP exposure
   inmap <- fread(file = "inmapPM.csv")[ , V1 := NULL]
