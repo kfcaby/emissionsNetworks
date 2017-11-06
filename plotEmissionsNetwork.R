@@ -1,8 +1,10 @@
  
 # exposure.type can be NA, continuous, binary
 # exposure.var can be avgPM, inmapPM, gams.coeff, num_edges
-plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgPM", exposure.binary.cutoff = 0.80, num.colors = 10, plot.edges = TRUE,
+plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgPM", exposure.binary.cutoff = 0.80, num.colors = 10, plot.edges = c(0,1000),
                                  main = " ", plot.diagnostics = TRUE){
+  
+  
   require(RColorBrewer)
   require(maps)
   require(maptools)
@@ -76,16 +78,19 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
   
   
   #plot the edges
-  if(plot.edges == TRUE & sum(edges$edge, na.rm = TRUE) > 0){
+  if(sum(edges$edge, na.rm = TRUE) > 0 & !is.na(plot.edges)){
     #assign colors based on lag
     colors <- brewer.pal(n = 4, name = "RdYlBu")
-    color.index <- 4 - subset(edges,edge == 1)$lag
+  
+    edges.to.plot <- subset(edges, edge == 1 & distance > plot.edges[1] & distance < plot.edges[2])
+    
+    color.index <- 4 - edges.to.plot$lag
     color.index <- ifelse(color.index < 1, 1, color.index)
     
-    segments(subset(edges, edge == 1)$M.longitude,
-             subset(edges, edge == 1)$M.latitude,
-             subset(edges, edge == 1)$PP.longitude,
-             subset(edges, edge == 1)$PP.latitude,
+    segments(edges.to.plot$M.longitude,
+             edges.to.plot$M.latitude,
+             edges.to.plot$PP.longitude,
+             edges.to.plot$PP.latitude,
              col = colors[color.index],
              lwd = 0.4)
   }
