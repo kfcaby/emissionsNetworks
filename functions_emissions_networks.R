@@ -1,14 +1,5 @@
 # Basic functions for manipulating emissions/PM time series and creating an emissions network
 
-source(file = "fitDailyPMmodels.R")
-source(file = "plotEmissionsNetwork.R")
-source(file = "decomp/decomposePM.R")
-source(file = "imputePM.R")
-load(file = "data/daily_emissions_facility_temperature.RData")
-setkey(M_locations, ID)
-setkey(PP_locations, ID)
-
-
 #convert a ZIP code from 3-digit to 5-digit format
 convertZip <- function(zip){
   temp_zip<-formatC(zip, width = 5, format = "d", flag = "0")
