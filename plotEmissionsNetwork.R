@@ -16,7 +16,9 @@ plotRadial <- function(edges, region, samps){
   lines.lwd <- ifelse(potential.edges$edge == 1, 4, 0.25)
   lines.color <- ifelse(potential.edges$edge == 1, "green", "red")
   polar.plot(potential.edges$distance,potential.edges$bearing,main= paste(region,"Links", sep = " "),start = 90,
-             lwd=lines.lwd,line.col= lines.color, clockwise = TRUE)
+             lwd=lines.lwd,line.col= lines.color, clockwise = TRUE, 
+             labels = c("N","NE","E","SE", "S","SW","W","NW"),
+             label.pos = seq(0,315, by = 45))
   points(0,0, cex = 3, pch = 24, bg = "yellow")
 }
 
