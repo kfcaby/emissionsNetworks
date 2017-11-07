@@ -2,9 +2,9 @@
 
 source(file = "fitDailyPMmodels.R")
 source(file = "plotEmissionsNetwork.R")
-source(file = "decomposePM.R")
+source(file = "decomp/decomposePM.R")
 source(file = "imputePM.R")
-load(file = "daily_emissions_facility_temperature.RData")
+load(file = "data/daily_emissions_facility_temperature.RData")
 setkey(M_locations, ID)
 setkey(PP_locations, ID)
 

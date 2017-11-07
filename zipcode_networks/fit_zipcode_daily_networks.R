@@ -20,4 +20,6 @@ colnames(zipcode_locations) <- c("ID", "Longitude", "Latitude", "zip.city", "zip
 zipcode_locations$ID <- paste("Z",zipcode_locations$ID, sep = "")
 setkey(zipcode_locations, ID)
 
-edges <- fitDailyPMmodels(2005,emissions, PM.zipcode, PP_locations, zipcode_locations, start.day = "06-01", end.day = "08-31")
+#edges <- fitDailyPMmodels(2005,emissions, PM.zipcode, PP_locations, zipcode_locations, start.day = "06-01", end.day = "08-31")
+
+
