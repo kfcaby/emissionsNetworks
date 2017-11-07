@@ -1,4 +1,25 @@
  
+plotDirections <- function(edges, region){
+  potential.edges <- subset(edges, !(is.na(edge)) & PP.region == region) 
+  probs <- potential.edges[ , list(sum(edge == 1,na.rm = TRUE)/sum(!is.na(edge))), by = "direction"]
+  probs <- probs[complete.cases(probs),]
+  probs[ , direction := factor(direction, levels = c("N","NE","E","SE","S","SW","W","NW"))]
+  setkey(probs,direction)
+  barplot(height = probs$V1, space = 0, main = paste("Edge Probability by Direction (",region," Power Plants)", sep = ""))
+  axis(1, labels = probs$direction, at = 1:(nrow(probs)) - 0.5)
+}
+
+plotRadial <- function(edges, region, samps){
+  potential.edges <- subset(edges, !(is.na(edge)) & PP.region == region) 
+  potential.edges <- potential.edges[sample(1:nrow(potential.edges),samps),]
+  lines.lty <- ifelse(potential.edges$edge == 1, 1, 1)
+  lines.lwd <- ifelse(potential.edges$edge == 1, 4, 0.25)
+  lines.color <- ifelse(potential.edges$edge == 1, "green", "red")
+  polar.plot(potential.edges$distance,potential.edges$bearing,main= paste(region,"Links", sep = " "),start = 90,
+             lwd=lines.lwd,line.col= lines.color, clockwise = TRUE)
+  points(0,0, cex = 3, pch = 24, bg = "yellow")
+}
+
 # exposure.type can be NA, continuous, binary
 # exposure.var can be avgPM, inmapPM, gams.coeff, num_edges
 plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgPM", exposure.binary.cutoff = 0.80, num.colors = 10, plot.edges = c(0,1000),
@@ -8,6 +29,8 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
   require(RColorBrewer)
   require(maps)
   require(maptools)
+  require(plotrix)
+  
   dft <- par("mar")
   par(mar = c(0,0,0,0))
   US <- map("state",fill=TRUE, plot=FALSE)
@@ -76,9 +99,9 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
   points(edges[J(unique(Monitor)), c("M.longitude","M.latitude"), mult = "first"],
          pch = pch.monitor, bg = bg.monitor, col = col.monitor, lwd = 0.50, cex = 1) 
   
-  
+  par(mar = dft)
   #plot the edges
-  if(sum(edges$edge, na.rm = TRUE) > 0 & !is.na(plot.edges)){
+  if(sum(edges$edge, na.rm = TRUE) > 0 & !any(is.na(plot.edges))){
     #assign colors based on lag
     colors <- brewer.pal(n = 4, name = "RdYlBu")
   
@@ -96,12 +119,23 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
   }
   
   if(plot.diagnostics == TRUE){
-    breaks <- seq(0,edges$max.distance[1], by = 250)
-    edges$dist.cat <- findInterval(edges$distance, breaks)
-    probs <- edges[ , list(sum(edge == 1,na.rm = TRUE)/sum(!is.na(edge))), by = "dist.cat"]
-    barplot(height = probs$V1, space = 0, main = "Edge Probability by Distance Category")
-    axis(1, at = 0:(length(breaks)-1), labels = breaks)
+    probs <- edges[ , list(sum(edge == 1,na.rm = TRUE)/sum(!is.na(edge))), by = "lag"]
+    probs <- probs[complete.cases(probs),]
+    setkey(probs,lag)
+    barplot(height = probs$V1, space = 0, main = "Edge Probability by Lag")
+    axis(1, labels = 0:nrow(probs), at = 1:(nrow(probs) + 1) - 0.5)
+    
+    
+    #edge angle
+    samps = 20000
+    plotDirections(edges, region = "Northeast")
+    plotRadial(edges, region = "Northeast", samps)
+    plotDirections(edges, region = "IndustrialMidwest")
+    plotRadial(edges, region = "IndustrialMidwest", samps)
+    plotDirections(edges, region = "Southeast")
+    plotRadial(edges, region = "Southeast", samps)
+    
   }
-  par(mar = dft)
+  
 }
 
