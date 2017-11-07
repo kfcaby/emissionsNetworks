@@ -5,6 +5,8 @@ library(lubridate)
 library(arepa)
 
 source(file = "../functions_emissions_networks.R")
+source(file = "../fitDailyPMmodels.R")
+load(file = "../data/daily_emissions_facility_temperature.RData")
 
 PM.zipcode <- fread("../data/PM.daily.zipcode2005.csv")
 zips <- PM.zipcode$V1
