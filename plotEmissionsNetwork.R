@@ -31,8 +31,6 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
   
   edges <- subset(edges, Monitor.region %in% regions)
   
-  plot.power.plants <- TRUE
-  
   require(maps)
   require(maptools)
   require(viridis)
@@ -86,7 +84,7 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
         setkey(edges, Monitor)
         pch.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),4,21)
       }
-      plot.power.plants <- FALSE
+      
     }
     if(exposure.type == "binary"){
       
@@ -100,16 +98,16 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
         setkey(edges, Monitor)
         pch.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),4,21)
       }
-      plot.power.plants <- FALSE
+      
     }
   }
   
   #Plot the monitors and the power plants
-  if(plot.power.plants == TRUE){
-    setkey(edges, PP)
-    points(edges[J(unique(PP)), c("PP.longitude","PP.latitude"), mult = "first"],
-           pch = 24, bg = "black", col = "black", lwd = 0.50, cex = 0.75) 
-  }
+  
+  setkey(edges, PP)
+  points(edges[J(unique(PP)), c("PP.longitude","PP.latitude"), mult = "first"],
+         pch = 24, bg = "black", col = "black", lwd = 0.50, cex = 0.75) 
+  
   setkey(edges, Monitor)
   points(edges[J(unique(Monitor)), c("M.longitude","M.latitude"), mult = "first"],
          pch = pch.monitor, bg = bg.monitor, col = col.monitor, lwd = 0.50, cex = 0.25) 
