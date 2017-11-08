@@ -27,11 +27,11 @@ plotRadial <- function(edges, region, samps){
 plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgPM", exposure.binary.cutoff = 0.80, num.colors = 10, plot.edges = c(0,1000),
                                  main = " ", plot.diagnostics = TRUE){
   
+  plot.power.plants <- TRUE
   
-  require(RColorBrewer)
   require(maps)
   require(maptools)
-  #require(plotrix)
+  require(viridis)
   
   dft <- par("mar")
   par(mar = c(0,0,0,0))
@@ -45,8 +45,8 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
   
   #determine colors of monitors
   if(is.na(exposure.type) || !exposure.type %in% c("binary","continuous")){
-    bg.monitor <- "green"
-    col.monitor <- "black"
+    bg.monitor <- viridis(4)[3]
+    col.monitor <- viridis(4)[3]
     setkey(edges, Monitor)
     pch.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),4,21)
   } else{
@@ -71,41 +71,46 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
     
     if(exposure.type == "continuous"){
       #exposure <- logNA(exposure)
-      bg.monitor = rbPal(num.colors)[as.numeric(cut(exposure, breaks = num.colors))]
-      col.monitor <- "black"
+      bg.monitor = rev(viridis(num.colors))[as.numeric(cut(exposure, breaks = num.colors))]
+      col.monitor <- bg.monitor
       pch.monitor <- ifelse(is.na(exposure), 4, 21)
       if(exposure.var %in% c("num_edges","gams.coeff")){
         setkey(edges, Monitor)
         pch.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),4,21)
       }
+      plot.power.plants <- FALSE
     }
     if(exposure.type == "binary"){
       
       High <- ifelse(exposure > quantile(exposure, exposure.binary.cutoff, na.rm = TRUE), 1, 0)
       
-      bg.monitor <- ifelse(High == 1 | is.na(High), "red","green")
-      col.monitor <- "black"
+      binary.colors <- viridis(2)
+      bg.monitor <- ifelse(High == 1 | is.na(High), binary.colors[1], binary.colors[2])
+      col.monitor <- bg.monitor
       pch.monitor <- ifelse(is.na(High), 4, 21)
       if(exposure.var %in% c("num_edges","gams.coeff")){
         setkey(edges, Monitor)
         pch.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),4,21)
       }
+      plot.power.plants <- FALSE
     }
   }
   
   #Plot the monitors and the power plants
-  setkey(edges, PP)
-  points(edges[J(unique(PP)), c("PP.longitude","PP.latitude"), mult = "first"],
-         pch = 24, bg = "yellow", col = "black", lwd = 0.50, cex = 0.2) 
+  if(plot.power.plants == TRUE){
+    setkey(edges, PP)
+    points(edges[J(unique(PP)), c("PP.longitude","PP.latitude"), mult = "first"],
+           pch = 24, bg = "black", col = "black", lwd = 0.50, cex = 0.5) 
+  }
   setkey(edges, Monitor)
   points(edges[J(unique(Monitor)), c("M.longitude","M.latitude"), mult = "first"],
-         pch = pch.monitor, bg = bg.monitor, col = col.monitor, lwd = 0.50, cex = 0.2) 
+         pch = pch.monitor, bg = bg.monitor, col = col.monitor, lwd = 0.50, cex = 0.75) 
   
   par(mar = dft)
   #plot the edges
   if(sum(edges$edge, na.rm = TRUE) > 0 & !any(is.na(plot.edges))){
     #assign colors based on lag
-    colors <- brewer.pal(n = 4, name = "RdYlBu")
+    colors <- viridis(4)
   
     edges.to.plot <- subset(edges, edge == 1 & distance > plot.edges[1] & distance < plot.edges[2])
     
