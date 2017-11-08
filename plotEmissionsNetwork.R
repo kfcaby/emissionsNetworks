@@ -28,8 +28,9 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
                                  exposure.binary.cutoff = 0.80, num.colors = 10, plot.edges = c(0,1000),
                                  main = " ", plot.diagnostics = TRUE,
                                  regions = c("Northeast","IndustrialMidwest","Southeast")){
-  
-  edges <- subset(edges, Monitor.region %in% regions)
+  if(length(regions) != 3){
+    edges <- subset(edges, Monitor.region %in% regions)
+  }
   
   require(maps)
   require(maptools)
@@ -109,8 +110,11 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
          pch = pch.monitor, bg = bg.monitor, col = col.monitor, lwd = 0.50, cex = 0.25) 
   
   setkey(edges, PP)
+  #scale size
+  emissions <- edges[J(unique(PP)), "avgemissions", mult = "first"]$avgemissions
+  monitor.cex <- ifelse(emissions < quantile(emissions, 0.8), 0.5, 1)
   points(edges[J(unique(PP)), c("PP.longitude","PP.latitude"), mult = "first"],
-         pch = 24, bg = "black", col = "black", lwd = 0.50, cex = 0.75) 
+         pch = 24, bg = "black", col = "black", lwd = 0.50, cex = monitor.cex) 
   
   
   par(mar = dft)
