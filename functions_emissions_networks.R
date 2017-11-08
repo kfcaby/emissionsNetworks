@@ -102,7 +102,12 @@ createAdjacencyMatrix <- function(edges){
 
 #This function returns some basic information about the output from the 
 #fitDailyPMmodels function
-edge_analysis <- function(edges){
+edge_analysis <- function(edges, regions = c("Northeast","IndustrialMidwest","Southeast")){
+  
+  if("Monitor.region" %in% colnames(edges)){
+    edges <- subset(edges, Monitor.region %in% regions)
+  }
+  
   network <- createAdjacencyMatrix(edges)
   max.distance <- edges$max.distance[1]
   print(paste("Number of edges in the network:", sum(edges$edge, na.rm = TRUE) , sep = " "))
@@ -118,6 +123,16 @@ edge_analysis <- function(edges){
   print(paste("With at least some emissions:", sum(!is.na(edges[J(unique(PP)), "avgemissions", mult = "first"])), sep = " "))
   print(paste("With at least one linked monitor:", length(unique(subset(edges, edge == 1)$PP)), sep = " "))
   print(paste("Median number of linked monitors:", median(rowSums(network, na.rm = TRUE)) ,sep = " "))
+  
+  #by power plant size
+  PP.cutoff.perc = 0.80
+  emissions.cutoff <- quantile(edges[J(unique(PP)), "avgemissions", mult = "first"]$avgemissions,
+                               PP.cutoff.perc)
+  edges[ , PP.cat := ifelse(avgemissions <= emissions.cutoff, 0,1)]
+  size.summary <- edges[ , round(sum(edge, na.rm = TRUE)/sum(!is.na(edge)),2), by = c("PP.cat","PP.region")]
+  size.summary <- dcast(size.summary,  PP.region ~ PP.cat, value.var = "V1")
+  print(paste("Edge probability by power plant size (1 = ",PP.cutoff.perc*100,"th percentile)", sep = ""))
+  print(size.summary)
   print("")
   setkey(edges,Monitor)
   print("Monitors")
