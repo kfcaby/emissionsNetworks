@@ -144,11 +144,6 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations ,sta
   pairs$bearing <- bearing(cbind(pairs$PP.longitude,pairs$PP.latitude), cbind(pairs$M.longitude,pairs$M.latitude))
   pairs$bearing <- ifelse(pairs$bearing < 0, pairs$bearing + 360, pairs$bearing)
   
-  #add InMAP exposure
-  inmap <- fread(file = "inmapPM.csv")[ , V1 := NULL]
-  setkey(inmap, Monitor, PP)
-  pairs[ , inmapPM := inmap[.(pairs$Monitor,pairs$PP),"inmapPM"]]
-  
   print(paste("The number of edges is:",sum(pairs$edge,na.rm = TRUE) ,sep = " "))
   print(paste("Edge density is:",round(sum(pairs$edge,na.rm = TRUE)/sum(!is.na(pairs$edge)),2), sep = ""))
   
