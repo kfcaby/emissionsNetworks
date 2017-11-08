@@ -57,8 +57,12 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
       exposure <- edges[J(unique(Monitor)), get(exposure.var), mult = "first"]
     }
     
-    if(exposure.var %in% c("inmapPM", "gams.coeff")){
+    if(exposure.var == "inmapPM"){
       exposure <- edges[ , sum(get(exposure.var), na.rm = TRUE), by = "Monitor"]$V1
+    }
+    
+    if(exposure.var == "gams.coeff"){
+      exposure <- edges[ , sum(get(exposure.var)*edge, na.rm = TRUE), by = "Monitor"]$V1
     }
     
     if(exposure.var == "num_edges"){
