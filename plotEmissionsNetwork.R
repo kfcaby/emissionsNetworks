@@ -24,8 +24,12 @@ plotRadial <- function(edges, region, samps){
 
 # exposure.type can be NA, continuous, binary
 # exposure.var can be avgPM, inmapPM, gams.coeff, num_edges
-plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgPM", exposure.binary.cutoff = 0.80, num.colors = 10, plot.edges = c(0,1000),
-                                 main = " ", plot.diagnostics = TRUE){
+plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgPM",
+                                 exposure.binary.cutoff = 0.80, num.colors = 10, plot.edges = c(0,1000),
+                                 main = " ", plot.diagnostics = TRUE,
+                                 regions = c("Northeast","IndustrialMidwest","Southeast")){
+  
+  edges <- subset(edges, Monitor.region %in% regions)
   
   plot.power.plants <- TRUE
   
