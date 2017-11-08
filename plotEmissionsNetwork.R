@@ -31,7 +31,7 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
   require(RColorBrewer)
   require(maps)
   require(maptools)
-  require(plotrix)
+  #require(plotrix)
   
   dft <- par("mar")
   par(mar = c(0,0,0,0))
@@ -131,11 +131,11 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
     #edge angle
     samps = 20000
     plotDirections(edges, region = "Northeast")
-    plotRadial(edges, region = "Northeast", samps)
+    #plotRadial(edges, region = "Northeast", samps)
     plotDirections(edges, region = "IndustrialMidwest")
-    plotRadial(edges, region = "IndustrialMidwest", samps)
+    #plotRadial(edges, region = "IndustrialMidwest", samps)
     plotDirections(edges, region = "Southeast")
-    plotRadial(edges, region = "Southeast", samps)
+    #plotRadial(edges, region = "Southeast", samps)
     
   }
   
