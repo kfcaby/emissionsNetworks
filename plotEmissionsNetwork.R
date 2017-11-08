@@ -104,13 +104,14 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
   
   #Plot the monitors and the power plants
   
+  setkey(edges, Monitor)
+  points(edges[J(unique(Monitor)), c("M.longitude","M.latitude"), mult = "first"],
+         pch = pch.monitor, bg = bg.monitor, col = col.monitor, lwd = 0.50, cex = 0.25) 
+  
   setkey(edges, PP)
   points(edges[J(unique(PP)), c("PP.longitude","PP.latitude"), mult = "first"],
          pch = 24, bg = "black", col = "black", lwd = 0.50, cex = 0.75) 
   
-  setkey(edges, Monitor)
-  points(edges[J(unique(Monitor)), c("M.longitude","M.latitude"), mult = "first"],
-         pch = pch.monitor, bg = bg.monitor, col = col.monitor, lwd = 0.50, cex = 0.25) 
   
   par(mar = dft)
   #plot the edges
