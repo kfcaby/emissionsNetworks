@@ -45,8 +45,8 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
   
   #determine colors of monitors
   if(is.na(exposure.type) || !exposure.type %in% c("binary","continuous")){
-    bg.monitor <- viridis(4)[3]
-    col.monitor <- viridis(4)[3]
+    bg.monitor <- "black"
+    col.monitor <- "black"
     setkey(edges, Monitor)
     pch.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),4,21)
   } else{
@@ -100,11 +100,11 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
   if(plot.power.plants == TRUE){
     setkey(edges, PP)
     points(edges[J(unique(PP)), c("PP.longitude","PP.latitude"), mult = "first"],
-           pch = 24, bg = "black", col = "black", lwd = 0.50, cex = 0.5) 
+           pch = 24, bg = "black", col = "black", lwd = 0.50, cex = 0.75) 
   }
   setkey(edges, Monitor)
   points(edges[J(unique(Monitor)), c("M.longitude","M.latitude"), mult = "first"],
-         pch = pch.monitor, bg = bg.monitor, col = col.monitor, lwd = 0.50, cex = 0.75) 
+         pch = pch.monitor, bg = bg.monitor, col = col.monitor, lwd = 0.50, cex = 0.25) 
   
   par(mar = dft)
   #plot the edges
