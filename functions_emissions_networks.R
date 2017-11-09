@@ -131,8 +131,13 @@ edge_analysis <- function(edges, regions = c("Northeast","IndustrialMidwest","So
   edges[ , PP.cat := ifelse(avgemissions <= emissions.cutoff, 0,1)]
   size.summary <- edges[ , round(sum(edge, na.rm = TRUE)/sum(!is.na(edge)),3), by = c("PP.cat","PP.region")]
   size.summary <- dcast(size.summary,  PP.region ~ PP.cat, value.var = "V1")
-  print(paste("Edge probability by power plant size (1 = ",PP.cutoff.perc*100,"th percentile)", sep = ""))
+  print(paste("The probability of an edge occurring from a power plant"))
+  print(paste("by size and region (1 = ",PP.cutoff.perc*100,"th percentile)", sep = ""))
   print(size.summary)
+  print("The number of power plants by region")
+  power.plants <- edges[J(unique(PP)), c("PP","PP.cat", "PP.region"), mult = "first"]
+  power.plants <- power.plants[ , .N, by = c("PP.cat","PP.region")]
+  print(dcast(power.plants, PP.region ~ PP.cat, value.var = "N"))
   print("")
   setkey(edges,Monitor)
   print("Monitors")
