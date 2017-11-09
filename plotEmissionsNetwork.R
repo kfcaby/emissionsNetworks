@@ -72,7 +72,7 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
     
     if(exposure.var == "num_edges"){
       monitor_degree <- edges[, list(degree = sum(edge,na.rm = TRUE),
-                                     possible = sum(distance < max.distance, na.rm = TRUE)),
+                                     possible = sum(!is.na(edge))),
                               by = "Monitor"]
       setkey(monitor_degree, Monitor)
       exposure <- monitor_degree[ , percent := degree/possible]$percent
