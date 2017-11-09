@@ -102,10 +102,12 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
   }
   
   #Plot the monitors and the power plants
+  monitor.cex <- ifelse("black" %in% bg.monitor, 0.20, 0.50)
+  
   
   setkey(edges, Monitor)
   points(edges[J(unique(Monitor)), c("M.longitude","M.latitude"), mult = "first"],
-         pch = pch.monitor, bg = bg.monitor, col = col.monitor, lwd = 0.50, cex = 0.25) 
+         pch = pch.monitor, bg = bg.monitor, col = col.monitor, lwd = 0.50, cex = monitor.cex) 
   
   setkey(edges, PP)
   #scale size
