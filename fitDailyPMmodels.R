@@ -1,6 +1,5 @@
-# start.day <- "06-01"
-# end.day <- "08-31"
-# year <- 2005
+# start.date <- "2005-06-01"
+# end.date <- "2005-08-31"
 # percent.of.powerplants = 20
 # lag = "distance_dependent"
 # p.adjust.method = "BH"
@@ -36,17 +35,17 @@ gams.test <- function(dataset, k1 = 3){
   )
 }
 
-fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations ,start.day, end.day, 
+fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations ,start.date, end.date, 
                              percent.of.powerplants = 100, alpha = 0.05, p.adjust.method = "BH",
                              lag = "distance_dependent", k1 = 3, plot.pvalues = FALSE, wind.speed = 13,
                              max.distance = 2000, include.west = FALSE){
 
   require(mgcv)
   require(geosphere)
+  require(lubridate)
   
-  start.date <- as.Date(paste(year,"-",start.day, sep = ""))
-  end.date <- as.Date(paste(year,"-",end.day,sep = ""))
-  
+  start.date <- as.Date(start.date)
+  end.date <- as.Date(end.date)
   
   lag.breaks <- (1:20)*24*wind.speed
   
@@ -122,9 +121,8 @@ fitDailyPMmodels <- function(year, emissions, PM, PP_locations, M_locations ,sta
   
   pairs$max.distance <- max.distance
   
-  pairs$start.day <- start.day
-  pairs$end.day <- end.day
-  pairs$year <- year
+  pairs$start.date <- start.date
+  pairs$end.date <- end.date
   pairs$wind.speed <- wind.speed
   pairs$knots <- k1
   
