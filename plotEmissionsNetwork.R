@@ -67,7 +67,7 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
     }
     
     if(exposure.var == "gams.coeff"){
-      exposure <- edges[ , sum(get(exposure.var)*edge, na.rm = TRUE), by = "Monitor"]$V1
+      exposure <- edges[ , sum(get(exposure.var)*edge, na.rm = TRUE)/sum(!is.na(edge)), by = "Monitor"]$V1
     }
     
     if(exposure.var == "num_edges"){
