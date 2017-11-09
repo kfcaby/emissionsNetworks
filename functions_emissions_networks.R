@@ -112,7 +112,7 @@ edge_analysis <- function(edges, regions = c("Northeast","IndustrialMidwest","So
   max.distance <- edges$max.distance[1]
   print(paste("Number of edges in the network:", sum(edges$edge, na.rm = TRUE) , sep = " "))
   print(paste("Number of possible edges in the network:", nrow(edges) , sep = " "))
-  print(paste("The edge density is:", round(sum(edges$edge, na.rm = TRUE)/sum(!is.na(edges$edge)),2), sep = " "))
+  print(paste("The edge density is:", round(sum(edges$edge, na.rm = TRUE)/sum(!is.na(edges$edge)),3), sep = " "))
   print(paste("Percent of GAMS models failing:", 
               round(100*(length(is.na(edges$edge)) - length(edges$distance > max.distance))/length(edges$distance < max.distance),2),
               "%",sep = " "))
@@ -129,7 +129,7 @@ edge_analysis <- function(edges, regions = c("Northeast","IndustrialMidwest","So
   emissions.cutoff <- quantile(edges[J(unique(PP)), "avgemissions", mult = "first"]$avgemissions,
                                PP.cutoff.perc)
   edges[ , PP.cat := ifelse(avgemissions <= emissions.cutoff, 0,1)]
-  size.summary <- edges[ , round(sum(edge, na.rm = TRUE)/sum(!is.na(edge)),2), by = c("PP.cat","PP.region")]
+  size.summary <- edges[ , round(sum(edge, na.rm = TRUE)/sum(!is.na(edge)),3), by = c("PP.cat","PP.region")]
   size.summary <- dcast(size.summary,  PP.region ~ PP.cat, value.var = "V1")
   print(paste("Edge probability by power plant size (1 = ",PP.cutoff.perc*100,"th percentile)", sep = ""))
   print(size.summary)
