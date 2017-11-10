@@ -47,7 +47,7 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
     US.IDs <- sapply(strsplit(US.names,":"),function(x) x[1])
     US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
     plot(US_poly_sp)
-    title(main, line = -3)
+    title(main, line = -3, adj = 0.70)
     
     
     #determine colors of monitors
