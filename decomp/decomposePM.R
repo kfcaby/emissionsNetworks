@@ -12,14 +12,9 @@ waveletDecomposition <- function(data, numLevels, lowest.level){
   return(lowfreq)
 }
 
-decomposePM <- function(PM, M_locations, numLevels, lowest.level, include.west = TRUE){
+decomposePM <- function(PM, M_locations, numLevels, lowest.level){
   M_locations <- M_locations[rownames(PM), ]
   
-  if(include.west == FALSE){
-    PM <- PM[M_locations$Longitude > -100,]
-    M_locations <- M_locations[rownames(PM),]
-  }
-   
   start.time <- Sys.time()
   PM.lowfreq <- apply(PM, 2, function(x, M_locations, numLevels, lowest.level){
     lowfreq <- rep(NA, length(x))
