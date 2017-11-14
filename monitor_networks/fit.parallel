@@ -11,17 +11,17 @@ Executable = /usr/local/bin/R
 Arguments = --no-save --no-restore --slave --args $(Process)
 
 # Specify the relative path to the input file
-input = fit_parallel_networks.R 
+input = fit_zipcode_daily_networks.R 
 
 #Notification = Complete
 #notify_user = kcummiskey@g.harvard.edu
 
 # Specify where to output any results printed by your program.
-output = output/out.$(Process)
+output = output_fall_decomposed/out.$(Process)
 # Specify where to save any errors returned by your program.
-error = output/error.$(Process)
+error = output_fall_decomposed/error.$(Process)
 # Specify where to save the log file.
-Log = output/log
+Log = output_fall_decomposed/log
 
 # Enter the number of processes to request.
 # This section should always come last.
