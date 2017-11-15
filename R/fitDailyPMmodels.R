@@ -123,7 +123,7 @@ fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations ,start.dat
   pairs$receptor.longitude <- M_locations[pairs$Monitor,]$Longitude
   pairs$receptor.latitude <- M_locations[pairs$Monitor,]$Latitude
   
-  pairs$PP.city <- PP_locations[pairs$PP,]$PP.city
+  pairs$PP.county <- PP_locations[pairs$PP,]$PP.county
   pairs$PP.state <- PP_locations[pairs$PP,]$PP.state
   pairs$PP.region <- PP_locations[pairs$PP,]$PP.region
   
