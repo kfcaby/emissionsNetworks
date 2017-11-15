@@ -23,7 +23,7 @@ max.distance = 1000 #max distance between edges
 k1 = 5
 wind.speed = 13 #kph
 include.west <- FALSE
-num.processes = 10 #number of cores to run on
+num.processes = 20 #number of cores to run on
 #----------------------------------------------------------------------------------------
 
 #Load PM
@@ -51,12 +51,6 @@ rownames(emissions) <- power.plants
 powerplant_locations <- fread("data/powerplant.locations.csv")[ , V1 := NULL]
 setkey(powerplant_locations, ID)
 powerplant_locations <- powerplant_locations[rownames(emissions),]
-
-#Remove observations in the west
-if(include.west == FALSE){
-  PM <- PM[receptor_locations$Longitude > -100,]
-  receptor_locations <- receptor_locations[rownames(PM),]
-}
 
 
 #determine which monitors to fit during this process
