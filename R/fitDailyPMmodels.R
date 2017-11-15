@@ -38,7 +38,8 @@ gams.test <- function(dataset, k1 = 3){
 fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations ,start.date, end.date, 
                              percent.of.powerplants = 100, alpha = 0.05, p.adjust.method = "BH",
                              lag = "distance_dependent", k1 = 3, plot.pvalues = FALSE, wind.speed = 13,
-                             max.distance = 2000, include.west = FALSE){
+                             max.distance = 2000, 
+                             receptor.regions = c("IndustrialMidwest","Northeast","Southeast")){
 
   require(mgcv)
   require(geosphere)
@@ -64,12 +65,9 @@ fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations ,start.dat
   
   M_locations <- M_locations[rownames(PM),]
   
-  #Remove observations in the west
-  if(include.west == FALSE){
-    PM <- PM[M_locations$Longitude > -100,]
-    M_locations <- M_locations[rownames(PM),]
-  }
-  
+  #Remove observations outside region of interest
+  PM <- PM[M_locations$receptor.region %in% receptor.regions,]
+  M_locations <- M_locations[rownames(PM),]
   
   pairs <- spDists(as.matrix(M_locations[,c(2,3)]),as.matrix(PP_locations[,c(2,3)]), longlat = TRUE)
   colnames(pairs) <- rownames(emissions)
