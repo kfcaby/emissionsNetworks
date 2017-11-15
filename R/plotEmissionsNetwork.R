@@ -27,11 +27,11 @@ plotRadial <- function(edges, region, samps){
 plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgPM",
                                  exposure.binary.cutoff = 0.70, num.colors = 10, plot.edges = c(0,1000),
                                  main = " ", plot.diagnostics = FALSE,
-                                 regions = c("Northeast","IndustrialMidwest","Southeast")){
+                                 receptor.regions = c("Northeast","IndustrialMidwest","Southeast")){
   
-  if("Monitor.region" %in% colnames(edges)){
-    edges <- subset(edges, Monitor.region %in% regions)
-  }
+  
+  edges <- subset(edges, receptor.region %in% receptor.regions)
+  
   
   
   require(maps)
@@ -108,7 +108,7 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
     
     
     setkey(edges, Monitor)
-    points(edges[J(unique(Monitor)), c("M.longitude","M.latitude"), mult = "first"],
+    points(edges[J(unique(Monitor)), c("receptor.longitude","receptor.latitude"), mult = "first"],
            pch = pch.monitor, bg = bg.monitor, col = col.monitor, lwd = 0.50, cex = monitor.cex) 
     
     setkey(edges, PP)
@@ -130,8 +130,8 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
       color.index <- 4 - edges.to.plot$lag
       color.index <- ifelse(color.index < 1, 1, color.index)
       
-      segments(edges.to.plot$M.longitude,
-               edges.to.plot$M.latitude,
+      segments(edges.to.plot$receptor.longitude,
+               edges.to.plot$receptor.latitude,
                edges.to.plot$PP.longitude,
                edges.to.plot$PP.latitude,
                col = colors[color.index],
