@@ -11,17 +11,17 @@ Executable = /usr/local/bin/R
 Arguments = --no-save --no-restore --slave
 
 # Specify the relative path to the input file
-input = decomp2005_zipcode.R 
+input = decomp_workflow.R 
 
 Notification = Complete
 notify_user = kcummiskey@g.harvard.edu
 
 # Specify where to output any results printed by your program.
-output = decomp.out.$(Process)
+output = output/decomp.out.$(Process)
 # Specify where to save any errors returned by your program.
-error = decomp.error.$(Process)
+error = output/decomp.error.$(Process)
 # Specify where to save the log file.
-Log = decomp.log
+Log = output/decomp.log
 
 # Enter the number of processes to request.
 # This section should always come last.

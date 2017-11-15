@@ -54,8 +54,8 @@ powerplant_locations <- powerplant_locations[rownames(emissions),]
 
 #Remove observations in the west
 if(include.west == FALSE){
-  PM <- PM[zipcode_locations$Longitude > -100,]
-  zipcode_locations <- zipcode_locations[rownames(PM),]
+  PM <- PM[receptor_locations$Longitude > -100,]
+  receptor_locations <- receptor_locations[rownames(PM),]
 }
 
 
@@ -69,10 +69,10 @@ monitors.this.process <- which(process.assignments == process)
 
 if(length(monitors.this.process) > 0){
   
-  edges <- fitDailyPMmodels(emissions, PM[monitors.this.process,], PP_locations, zipcode_locations, 
+  edges <- fitDailyPMmodels(emissions, PM[monitors.this.process,], powerplant_locations, receptor_locations, 
                             start.date, end.date, k1 = k1, wind.speed = wind.speed, max.distance = max.distance)
   
-  this.file <- paste("output_",season,"_",PM.type,"/edges2005_zipcode",process,".csv", sep="")
+  this.file <- paste(unit.type,"_networks/output_",season,"_",PM.type,"/edges",process,".csv", sep="")
   write.csv(edges, file = this.file)
 }
 
