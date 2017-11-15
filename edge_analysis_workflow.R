@@ -1,24 +1,25 @@
 rm(list=ls())
-setwd("/nfs/nsaph_ci3/users/ci3_kcummiskey/emissionsNetworks/zipcode_networks")
+setwd("/nfs/nsaph_ci3/users/ci3_kcummiskey/emissionsNetworks")
 
 library(data.table)
 library(geosphere)
 
-source(file = "../functions_emissions_networks.R")
-source(file = "../plotEmissionsNetwork.R")
-source(file = "../import_edges.R")
+#source(file = "../functions_emissions_networks.R")
+source(file = "R/plotEmissionsNetwork.R")
+source(file = "R/import_edges.R")
 
 #Parameters
-season <- "fall"
-PM.type <- "decomposed" #c("raw", "decomposed")
+unit.type <- "monitor" # either "zipcode" or "monitor"
+season <- "summer"
+PM.type <- "raw" #c("raw", "decomposed")
 
 #imports output from fitDailyPMmodels
-edges <- import_edges(season, PM.type)
+edges <- import_edges(unit.type,season, PM.type)
 
 
 
 #START HERE
-plot.file = paste("plots/zipcode_",season,"_",PM.type,".pdf", sep = "")
+plot.file = paste(unit.type,"_networks/plots/",unit.type,"_",season,"_",PM.type,".pdf", sep = "")
 pdf(plot.file, height = 9, width = 22)
 plotEmissionsNetwork(edges, plot.diagnostics = FALSE, 
                      main = "", plot.edges = c(0,0))
