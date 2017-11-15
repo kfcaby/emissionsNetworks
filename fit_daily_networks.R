@@ -14,7 +14,7 @@ end.date <- "2005-08-31"
 season <- "summer"
 
 # raw PM or decomposed PM
-PM.type <- "raw" #c("raw","decomposed")
+PM.type <- "decomposed43" #c("raw","decomposedXX")
 
 unit.type <- "monitor" #c("zipcode","monitor") #perform a monitor or zipcode analysis
 
@@ -23,7 +23,7 @@ max.distance = 1000 #max distance between edges
 k1 = 5
 wind.speed = 13 #kph
 include.west <- FALSE
-num.processes = 100 #number of cores to run on
+num.processes = 10 #number of cores to run on
 #----------------------------------------------------------------------------------------
 
 #Load PM

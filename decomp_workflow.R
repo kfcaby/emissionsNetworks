@@ -29,5 +29,5 @@ receptor_locations <- receptor_locations[rownames(PM),]
 
 PMdecomposed <- decomposePM(PM, receptor_locations, numLevels = numLevels, lowest.level = lowest.level)
 
-output.file = paste("data/PM.daily.",unit.type,"2005_decomposed",numLevels,lowest.level, sep ="")
+output.file = paste("data/PM.daily.",unit.type,"2005_decomposed",numLevels,lowest.level,".csv", sep ="")
 write.csv(PMdecomposed, file = output.file)

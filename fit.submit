@@ -17,11 +17,11 @@ input = fit_daily_networks.R
 #notify_user = kcummiskey@g.harvard.edu
 
 # Specify where to output any results printed by your program.
-output = monitor_networks/output_summer_raw/out.$(Process)
+output = monitor_networks/output_summer_decomposed43/out.$(Process)
 # Specify where to save any errors returned by your program.
-error = monitor_networks/output_summer_raw/error.$(Process)
+error = monitor_networks/output_summer_decomposed43/error.$(Process)
 # Specify where to save the log file.
-Log = monitor_networks/output_summer_raw/log
+Log = monitor_networks/output_summer_decomposed43/log
 
 # Enter the number of processes to request.
 # This section should always come last.

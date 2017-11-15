@@ -28,35 +28,5 @@ import_edges <- function(unit.type = "monitor", season = "summer", PM.type = "ra
   return(edges)
 }
   
-#   #add monitor state and region
-#   zipcode_locations <- fread("../data/zipcode.locations.csv")[ ,V1:=NULL]
-#   setkey(zipcode_locations,ID)
-#   setkey(edges,Monitor, PP)
-#   edges$Monitor.state <- zipcode_locations[edges$Monitor,]$zip.state
-#   edges$Monitor.region <- getRegion(edges$Monitor.state)
-#   
-#   #only use these regions
-#   edges <- subset(edges, Monitor.region %in% c("Northeast","IndustrialMidwest","Southeast")) 
-#   
-#   #add powerplant state and region
-#   facility.state <- unique(fread("../data/unitlevel.csv",
-#                                  select = c("Facility.ID..ORISPL.","State.x")))
-#   colnames(facility.state) <- c("PP","State")
-#   facility.state$PP <- paste("PP",facility.state$PP,sep = "")
-#   setkey(facility.state, PP)
-#   setkey(edges,PP,Monitor)
-#   edges$PP.state <- facility.state[edges$PP,]$State
-#   edges$PP.region <- getRegion(edges$PP.state)
-#   
-#   inmap <- fread(file = "../data/inmap_zipcodePM.csv")
-#   zips <- inmap$V1
-#   inmap <- as.matrix(inmap[ ,-1])
-#   rownames(inmap) <- zips
-#   inmap_long <- data.table(melt(inmap))
-#   colnames(inmap_long) <- c("Monitor", "PP", "inmapPM")
-#   setkey(inmap_long, Monitor,PP)
-#   setkey(edges, Monitor, PP)
-#   edges <- inmap_long[edges]
-  
- 
+
   

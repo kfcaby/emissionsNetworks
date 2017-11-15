@@ -11,7 +11,7 @@ source(file = "R/import_edges.R")
 #Parameters
 unit.type <- "monitor" # either "zipcode" or "monitor"
 season <- "summer"
-PM.type <- "raw" #c("raw", "decomposed")
+PM.type <- "decomposed43" #c("raw", "decomposed")
 
 #imports output from fitDailyPMmodels
 edges <- import_edges(unit.type,season, PM.type)
@@ -22,7 +22,7 @@ edges <- import_edges(unit.type,season, PM.type)
 plot.file = paste(unit.type,"_networks/plots/",unit.type,"_",season,"_",PM.type,".pdf", sep = "")
 pdf(plot.file, height = 9, width = 22)
 plotEmissionsNetwork(edges, plot.diagnostics = FALSE, 
-                     main = "", plot.edges = c(0,0))
+                     main = "", plot.edges = c(0,1000))
 plotEmissionsNetwork(edges, plot.diagnostics = FALSE, 
                      main = paste("Northeast - ",season," 2005", sep = ""), regions = "Northeast")
 plotEmissionsNetwork(edges, plot.diagnostics = FALSE, 
