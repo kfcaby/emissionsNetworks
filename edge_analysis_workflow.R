@@ -17,7 +17,6 @@ PM.type <- "decomposed43" #c("raw", "decomposed")
 edges <- import_edges(unit.type,season, PM.type)
 
 
-
 #START HERE
 plot.file = paste(unit.type,"_networks/plots/",unit.type,"_",season,"_",PM.type,".pdf", sep = "")
 pdf(plot.file, height = 9, width = 22)

@@ -110,14 +110,6 @@ fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations ,start.dat
   print("Model fitting complete:")
   print(Sys.time() - start.time)
   
-  adj <- rep(NA, nrow(pairs))
-  adj[!is.na(pairs$lag)] <- p.adjust(gams.results[2,], method = p.adjust.method)
-  
-  #adjust for multiple comparisons
-  pairs$p.value_adj <- adj 
-  
-  #edges in network
-  pairs$edge <- ifelse(pairs$p.value_adj <= alpha & pairs$gams.coeff > 0, 1, 0)
   
   pairs$max.distance <- max.distance
   
@@ -128,8 +120,16 @@ fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations ,start.dat
   
   pairs$PP.longitude <- PP_locations[pairs$PP,]$Longitude
   pairs$PP.latitude <- PP_locations[pairs$PP,]$Latitude
-  pairs$M.longitude <- M_locations[pairs$Monitor,]$Longitude
-  pairs$M.latitude <- M_locations[pairs$Monitor,]$Latitude
+  pairs$receptor.longitude <- M_locations[pairs$Monitor,]$Longitude
+  pairs$receptor.latitude <- M_locations[pairs$Monitor,]$Latitude
+  
+  pairs$PP.city <- PP_locations[pairs$PP,]$PP.city
+  pairs$PP.state <- PP_locations[pairs$PP,]$PP.state
+  pairs$PP.region <- PP_locations[pairs$PP,]$PP.region
+  
+  pairs$receptor.city <- M_locations[pairs$Monitor,]$receptor.city
+  pairs$receptor.state <- M_locations[pairs$Monitor,]$receptor.state
+  pairs$receptor.region <- M_locations[pairs$Monitor,]$receptor.region
   
   pairs[ , avgPM := rowMeans(PM[Monitor,], na.rm = TRUE)]
   pairs[ , avgemissions := rowMeans(emissions[PP ,], na.rm = TRUE)]
@@ -139,8 +139,19 @@ fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations ,start.dat
   
   setkey(pairs, Monitor, PP)
   
-  pairs$bearing <- bearing(cbind(pairs$PP.longitude,pairs$PP.latitude), cbind(pairs$M.longitude,pairs$M.latitude))
+  pairs$bearing <- bearing(cbind(pairs$PP.longitude,pairs$PP.latitude),
+                           cbind(pairs$receptor.longitude,pairs$receptor.latitude))
   pairs$bearing <- ifelse(pairs$bearing < 0, pairs$bearing + 360, pairs$bearing)
+  
+  #add direction to edge data
+  angle_breaks <- seq(22.5,337.5, by = 45)
+  direction_ints <- data.table(PP = pairs$PP, Monitor = pairs$Monitor, 
+                               interval = findInterval(pairs$bearing, angle_breaks), key = "interval")
+  direction.table <- data.table(interval = 0:8, direction = c("N","NE","E","SE", "S","SW","W","NW","N"), key = "interval")
+  directions <- direction_ints[direction.table]
+  setkey(directions, PP, Monitor)
+  setkey(pairs, PP, Monitor)
+  pairs <- merge(pairs,directions[ ,.(PP,Monitor,direction)])
   
   print(paste("The number of edges is:",sum(pairs$edge,na.rm = TRUE) ,sep = " "))
   print(paste("Edge density is:",round(sum(pairs$edge,na.rm = TRUE)/sum(!is.na(pairs$edge)),2), sep = ""))
