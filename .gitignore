@@ -1,3 +1,7 @@
 .Rproj.user
 .Rhistory
 .RData
+
+zipcode_networks/output*
+
+monitor_networks/output*
