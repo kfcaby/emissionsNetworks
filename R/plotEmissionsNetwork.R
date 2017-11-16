@@ -122,6 +122,7 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
     
     par(mar = dft)
     #plot the edges
+    plotted.edges = FALSE #used for legend plotting
     if(sum(edges$edge, na.rm = TRUE) > 0 & !any(is.na(plot.edges))){
       #assign colors based on lag
       colors <- viridis(4)
@@ -137,6 +138,7 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
                edges.to.plot$PP.latitude,
                col = colors[color.index],
                lwd = 0.4)
+      if(nrow(edges.to.plot) > 0) plotted.edges = TRUE
     }
     if(plot.legend == TRUE){
       legend(x = -78.8, y = 32.4, 
@@ -144,7 +146,13 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
              pch = c(24,24,21),
              pt.cex = c(1,0.5,3),
              pt.bg = "black")
-      
+      #plot edges legend when edges were plotted 
+      if(plotted.edges == TRUE){
+        legend(x = -78.8, y = 29.5, 
+               legend = c("lag 0 edge","lag 1 edge","lag 2 edge", "lag 3 edge"),
+               col = rev(viridis(4)),
+               lty = 1, lwd = 2)
+      }
     }
   }
   if(plot.diagnostics == TRUE){
