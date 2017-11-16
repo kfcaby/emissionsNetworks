@@ -5,7 +5,7 @@ plotDirections <- function(edges, region){
   probs <- probs[complete.cases(probs),]
   probs[ , direction := factor(direction, levels = c("N","NE","E","SE","S","SW","W","NW"))]
   setkey(probs,direction)
-  barplot(height = probs$V1, space = 0, main = paste("Edge Probability by Direction (",region," Power Plants)", sep = ""))
+  barplot(height = probs$V1, space = 0, main = paste("Edge Probability by Direction from Power Plant to Receptor (",region," Power Plants)", sep = ""))
   axis(1, labels = probs$direction, at = 1:(nrow(probs)) - 0.5)
 }
 
@@ -27,7 +27,8 @@ plotRadial <- function(edges, region, samps){
 plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgPM",
                                  exposure.binary.cutoff = 0.70, num.colors = 10, plot.edges = c(0,1000),
                                  main = " ", plot.diagnostics = FALSE,
-                                 receptor.regions = c("Northeast","IndustrialMidwest","Southeast")){
+                                 receptor.regions = c("Northeast","IndustrialMidwest","Southeast"),
+                                 plot.legend = TRUE){
   
   
   edges <- subset(edges, receptor.region %in% receptor.regions)
@@ -104,7 +105,7 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
     }
     
     #Plot the monitors and the power plants
-    monitor.cex <- ifelse("black" %in% bg.monitor, 0.20, 0.50)
+    monitor.cex <- ifelse("black" %in% bg.monitor, 0.50, 3)
     
     
     setkey(edges, Monitor)
@@ -114,9 +115,9 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
     setkey(edges, PP)
     #scale size
     emissions <- edges[J(unique(PP)), "avgemissions", mult = "first"]$avgemissions
-    monitor.cex <- ifelse(emissions < quantile(emissions, 0.8), 0.5, 1)
+    pp.cex <- ifelse(emissions < quantile(emissions, 0.8), 0.5, 1)
     points(edges[J(unique(PP)), c("PP.longitude","PP.latitude"), mult = "first"],
-           pch = 24, bg = "black", col = "black", lwd = 0.50, cex = monitor.cex) 
+           pch = 24, bg = "black", col = "white", lwd = 0.50, cex = pp.cex) 
     
     
     par(mar = dft)
@@ -136,6 +137,14 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
                edges.to.plot$PP.latitude,
                col = colors[color.index],
                lwd = 0.4)
+    }
+    if(plot.legend == TRUE){
+      legend(x = -78.8, y = 32.4, 
+             legend = c("Large coal power plant","Coal power plant","AQS monitor"),
+             pch = c(24,24,21),
+             pt.cex = c(1,0.5,3),
+             pt.bg = "black")
+      
     }
   }
   if(plot.diagnostics == TRUE){
