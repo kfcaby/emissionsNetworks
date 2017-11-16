@@ -50,13 +50,16 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
     plot(US_poly_sp)
     title(main, line = -3, adj = 0.70)
     
+   
     
     #determine colors of monitors
     if(is.na(exposure.type) || !exposure.type %in% c("binary","continuous")){
       bg.monitor <- "black"
       col.monitor <- "black"
       setkey(edges, Monitor)
+      #determine how to plot cases when no PM was observed
       pch.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),4,21)
+      cex.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),0,3)
     } else{
       setkey(edges, Monitor)
       rbPal <- colorRampPalette(c('white','black'))
@@ -82,9 +85,12 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
         bg.monitor = rev(viridis(num.colors))[as.numeric(cut(exposure, breaks = num.colors))]
         col.monitor <- bg.monitor
         pch.monitor <- ifelse(is.na(exposure), 4, 21)
+        #plot NAs really small
+        cex.monitor <- ifelse(is.na(exposure), 0, 3)
         if(exposure.var %in% c("num_edges","gams.coeff")){
           setkey(edges, Monitor)
           pch.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),4,21)
+          cex.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),0,3)
         }
         
       }
@@ -96,28 +102,28 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
         bg.monitor <- ifelse(High == 1 | is.na(High), binary.colors[1], binary.colors[2])
         col.monitor <- bg.monitor
         pch.monitor <- ifelse(is.na(High), 4, 21)
+        cex.monitor <- ifelse(is.na(exposure), 0, 3)
         if(exposure.var %in% c("num_edges","gams.coeff")){
           setkey(edges, Monitor)
           pch.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),4,21)
+          cex.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),0,3)
         }
         
       }
     }
     
-    #Plot the monitors and the power plants
-    monitor.cex <- ifelse("black" %in% bg.monitor, 0.50, 3)
     
     
     setkey(edges, Monitor)
     points(edges[J(unique(Monitor)), c("receptor.longitude","receptor.latitude"), mult = "first"],
-           pch = pch.monitor, bg = bg.monitor, col = col.monitor, lwd = 0.50, cex = monitor.cex) 
+           pch = pch.monitor, bg = bg.monitor, col = col.monitor, cex = cex.monitor) 
     
     setkey(edges, PP)
     #scale size
     emissions <- edges[J(unique(PP)), "avgemissions", mult = "first"]$avgemissions
-    pp.cex <- ifelse(emissions < quantile(emissions, 0.8), 0.5, 1)
+    pp.cex <- ifelse(emissions < quantile(emissions, 0.8), 0.75, 1.25)
     points(edges[J(unique(PP)), c("PP.longitude","PP.latitude"), mult = "first"],
-           pch = 24, bg = "black", col = "white", lwd = 0.50, cex = pp.cex) 
+           pch = 24, bg = viridis(2)[2], col = "black", lwd = 2, cex = pp.cex) 
     
     
     par(mar = dft)
@@ -141,11 +147,32 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
       if(nrow(edges.to.plot) > 0) plotted.edges = TRUE
     }
     if(plot.legend == TRUE){
-      legend(x = -78.8, y = 32.4, 
-             legend = c("Large coal power plant","Coal power plant","AQS monitor"),
-             pch = c(24,24,21),
-             pt.cex = c(1,0.5,3),
-             pt.bg = "black")
+      if(!is.na(exposure.type)){
+        if(exposure.type == "binary"){
+          legend(x = -78.8, y = 32.4, 
+                 legend = c("Large coal power plant","Coal power plant",
+                            "High-exposed location", "Low-exposed location"),
+                 pch = c(24,24,21, 21),
+                 pt.cex = c(1.25,0.75,3,3),
+                 pt.bg = c(viridis(2)[2],viridis(2)[2], binary.colors[1],binary.colors[2]))
+        } 
+        if(exposure.type != "binary"){
+          legend(x = -78.8, y = 32.4, 
+                 legend = c("Large coal power plant","Coal power plant","AQS monitor"),
+                 pch = c(24,24,21),
+                 pt.cex = c(1.25,0.75,3),
+                 pt.bg = c(viridis(2)[2],viridis(2)[2],"black"))
+        }
+      }
+      if(is.na(exposure.type)){
+        legend(x = -78.8, y = 32.4, 
+               legend = c("Large coal power plant","Coal power plant","AQS monitor"),
+               pch = c(24,24,21),
+               pt.cex = c(1.25,0.75,3),
+               pt.bg = c(viridis(2)[2],viridis(2)[2],"black"))
+      }
+      
+      
       #plot edges legend when edges were plotted 
       if(plotted.edges == TRUE){
         legend(x = -78.8, y = 29.5, 
