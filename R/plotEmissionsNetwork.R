@@ -28,10 +28,17 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
                                  exposure.binary.cutoff = 0.70, num.colors = 10, plot.edges = c(0,1000),
                                  main = " ", plot.diagnostics = FALSE,
                                  receptor.regions = c("Northeast","IndustrialMidwest","Southeast"),
-                                 plot.legend = TRUE){
+                                 plot.legend = TRUE, plot.close.powerplants = TRUE){
   
   
   edges <- subset(edges, receptor.region %in% receptor.regions)
+  
+  #only plot powerplants that could possibly connect to a monitor
+  if(plot.close.powerplants == TRUE){
+    PP.close <- edges[ , sum(!is.na(lag)), by = "PP"]
+    PP.close <- subset(PP.close, V1 > 0)
+    edges <- subset(edges, PP %in% PP.close$PP)
+  }
   
   
   
