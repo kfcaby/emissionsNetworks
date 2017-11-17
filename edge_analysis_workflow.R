@@ -7,28 +7,48 @@ library(geosphere)
 #source(file = "../functions_emissions_networks.R")
 source(file = "R/plotEmissionsNetwork.R")
 source(file = "R/import_edges.R")
+source(file = "R/edge_analysis.R")
 
 #Parameters
 unit.type <- "monitor" # either "zipcode" or "monitor"
 season <- "summer"
-PM.type <- "decomposed43" #c("raw", "decomposed")
+PM.type <- "decomposed74" #c("raw", "decomposedXX")
 
 #imports output from fitDailyPMmodels
 edges <- import_edges(unit.type,season, PM.type)
+
+#TO DO
+#1 - make monitor markers bigger
+#2 - try on 73 decomposed PM
 
 
 #START HERE
 plot.file = paste(unit.type,"_networks/plots/",unit.type,"_",season,"_",PM.type,".pdf", sep = "")
 pdf(plot.file, height = 9, width = 22)
+
+#blank map
+plotEmissionsNetwork(edges, plot.diagnostics = FALSE, main = "US map of Power Plants and AQS monitors",
+                     plot.edges = c(0,0), plot.close.powerplants = FALSE)
+
+#average PM exposure
+plotEmissionsNetwork(edges, plot.diagnostics = FALSE, exposure.type = "continuous", 
+                     exposure.var = "avgPM",main = paste("avgPM_",season,"_",PM.type, sep ="")
+                     , plot.edges = c(0,0))
+
+
+#edges by region
 plotEmissionsNetwork(edges, plot.diagnostics = FALSE, 
-                     main = "", plot.edges = c(0,1000))
+                     main = paste("Northeast - ",season," 2005", sep = ""), receptor.regions = "Northeast")
 plotEmissionsNetwork(edges, plot.diagnostics = FALSE, 
-                     main = paste("Northeast - ",season," 2005", sep = ""), regions = "Northeast")
+                     main = paste("IndustrialMidwest - ",season," 2005", sep = ""), receptor.regions = "IndustrialMidwest")
 plotEmissionsNetwork(edges, plot.diagnostics = FALSE, 
-                     main = paste("IndustrialMidwest - ",season," 2005", sep = ""), regions = "IndustrialMidwest")
-plotEmissionsNetwork(edges, plot.diagnostics = FALSE, 
-                     main = paste("Southeast - ",season," 2005", sep = ""), regions = "Southeast")
+                     main = paste("Southeast - ",season," 2005", sep = ""), receptor.regions = "Southeast")
+
+
+#diagnostics
 plotEmissionsNetwork(edges, plot.diagnostics = TRUE)
+
+#edge plots by lag 
 plotEmissionsNetwork(edges, plot.diagnostics = FALSE, 
                      main = paste(season, " 2005 Lag 0 edges", sep = ""), 
                      plot.edges = c(0, 13*24))
@@ -42,6 +62,8 @@ plotEmissionsNetwork(edges, plot.diagnostics = FALSE,
                      main = paste(season, " 2005 Lag 3 edges", sep = ""), 
                      plot.edges = c(3*13*24, 4*13*24))
 par(mfrow = c(1,2))
+
+#continuous gams vs PM plots
 plotEmissionsNetwork(edges, plot.diagnostics = FALSE, exposure.type = "continuous",
                      exposure.var = "gams.coeff", plot.edges = c(0,0),
                      main = paste("sum of gams.coeff", season,"2005", sep = " "))
@@ -49,15 +71,23 @@ plotEmissionsNetwork(edges, plot.diagnostics = FALSE, exposure.type = "continuou
                      exposure.var = "avgPM", plot.edges = c(0,0),
                      main = paste("avgPM", season, "2005", sep = " "))
 
+#binary gams vs PM plot
 plotEmissionsNetwork(edges, plot.diagnostics = FALSE, exposure.type = "binary",
                       exposure.var = "gams.coeff", plot.edges = c(0,0),
                      main = paste("sum of gams.coeff", season,"2005", sep = " "))
 plotEmissionsNetwork(edges, plot.diagnostics = FALSE, exposure.type = "binary",
                      exposure.var = "avgPM", plot.edges = c(0,0),
                      main = paste("avgPM", season,"2005", sep = " "))
+#numedges plots
+plotEmissionsNetwork(edges, plot.diagnostics = FALSE, exposure.type = "continuous",
+                     exposure.var = "num_edges", plot.edges = c(0,0),
+                     main = paste("num_edges", season,"2005", sep = " "))
+plotEmissionsNetwork(edges, plot.diagnostics = FALSE, exposure.type = "binary",
+                     exposure.var = "num_edges", plot.edges = c(0,0),
+                     main = paste("num_edges", season,"2005", sep = " "))
 par(mfrow = c(1,1))
 dev.off()
-sink.file = paste("plots/edge_analysis_zipcode_",season,"_",PM.type,".txt", sep = "")
+sink.file = paste(unit.type,"_networks/plots/edge_analysis_",unit.type,"_",season,"_",PM.type,".txt", sep = "")
 sink(file = sink.file)
 print(edge_analysis(edges))
 sink()
