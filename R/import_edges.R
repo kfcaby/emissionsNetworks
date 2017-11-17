@@ -15,6 +15,13 @@ import_edges <- function(unit.type = "monitor", season = "summer", PM.type = "ra
   #Calculate 
   edges$p.value_adj <- p.adjust(edges$p.value, method = "BH")
   edges$edge <- ifelse(edges$p.value_adj <= 0.05 & edges$gams.coeff > 0, 1, 0)
+  
+  #add inmap
+  inmap.file <- paste("data/inmap_",unit.type,"PM.csv", sep = "")
+  inmap <- fread(inmap.file)[ ,V1 := NULL]
+  setkey(inmap, PP, Monitor)
+  setkey(edges, PP, Monitor)
+  edges <- inmap[edges]
     
   return(edges)
 }
