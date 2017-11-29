@@ -176,7 +176,8 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
                legend = c("Large coal power plant","Coal power plant","AQS monitor"),
                pch = c(24,24,21),
                pt.cex = c(1.25,0.75,3),
-               pt.bg = c(viridis(2)[2],viridis(2)[2],"black"))
+               pt.bg = c(viridis(2)[2],viridis(2)[2],"black"),
+               cex = 1.5)
       }
       
       
