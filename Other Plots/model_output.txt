@@ -1,0 +1,30 @@
+
+Family: gaussian 
+Link function: identity 
+
+Formula:
+log(y) ~ s(time, bs = "cr", k = k1) + x + weekdays(as.Date(date))
+
+Parametric coefficients:
+                                  Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                       5.846693   0.041652 140.370  < 2e-16 ***
+x                                 0.003846   0.001319   2.916  0.00469 ** 
+weekdays(as.Date(date))Monday    -0.025736   0.049152  -0.524  0.60211    
+weekdays(as.Date(date))Saturday  -0.108762   0.048839  -2.227  0.02897 *  
+weekdays(as.Date(date))Sunday    -0.127247   0.048823  -2.606  0.01105 *  
+weekdays(as.Date(date))Thursday   0.041476   0.050855   0.816  0.41735    
+weekdays(as.Date(date))Tuesday   -0.004787   0.049050  -0.098  0.92251    
+weekdays(as.Date(date))Wednesday -0.006828   0.050921  -0.134  0.89369    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Approximate significance of smooth terms:
+          edf Ref.df     F  p-value    
+s(time) 3.457  3.832 8.449 2.91e-05 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+R-sq.(adj) =  0.362   Deviance explained = 44.1%
+GCV = 0.017094  Scale est. = 0.014816  n = 86
+X11cairo 
+       2 
