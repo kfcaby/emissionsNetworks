@@ -10,19 +10,21 @@
 # max.distance = 1000
 # include.west = FALSE
 
+#use when specifying one lag
 make_dataset <- function(emissions, PM, monitor, powerplant, lag){
-  y <- emissions[powerplant, ]
-  x <- PM[monitor, ]
+  x <- emissions[powerplant, ]
+  y <- PM[monitor, ]
   time <- 1:(length(x) - lag)
   date <- colnames(emissions)
   if(lag > 0){
-    y <- y[-1*((length(y)-lag + 1):length(y))]
-    x <- x[-1*(1:lag)]
+    x <- x[-1*((length(x)-lag + 1):length(x))]
+    y <- y[-1*(1:lag)]
     date <- date[-1*((length(date)-lag + 1):length(date))]
   }
   dataset <- data.frame(time,y,x,date)
   return(dataset)
 }
+
 
 gams.test <- function(dataset, k1 = 3){
   tryCatch({
@@ -34,6 +36,32 @@ gams.test <- function(dataset, k1 = 3){
   }, error = function(err) return(rep(NA,2))
   )
 }
+
+make_dataset_distLag <- function(emissions, PM, monitor, powerplant){
+  x0 <- emissions[powerplant, ]
+  x1 <- c(NA,x0[-length(x0)])
+  x2 <- c(NA,NA,x0[-1*(length(x0)-1):length(x0)])
+  x3 <- c(NA,NA,NA,x0[-1*(length(x0)-2):length(x0)])
+  y <- PM[monitor, ]
+  time <- 1:length(x0)
+  date <- colnames(emissions)
+  dataset <- data.frame(time,y,x0,x1,x2,x3,date)
+  return(dataset)
+}
+
+gams.test_distLag <- function(dataset, k1 = 3){
+  tryCatch({
+    model <- gam(log(y) ~ s(time, bs = "cr", k = k1) + x0 + x1 + x2 + x3 + weekdays(as.Date(date)), 
+                 data = dataset, family = gaussian, na.action = na.omit)
+    sum.coeff <- sum(summary(model)$p.coeff[2:5])
+    cov.mat <- vcov(model)[2:5,2:5]    
+    var.sum <- sum(diag(cov.mat)) + sum(2*cov.mat[lower.tri(cov.mat)])
+    p.value <- pnorm(abs(sum.coeff/sqrt(var.sum)), lower.tail = FALSE)
+    return(c(sum.coeff,p.value))
+  }, error = function(err) return(rep(NA,2))
+  )
+}
+
 
 fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations ,start.date, end.date, 
                              percent.of.powerplants = 100, alpha = 0.05, p.adjust.method = "BH",
@@ -85,13 +113,18 @@ fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations ,start.dat
   
   temp <- pairs[!is.na(lag),]
   
-  gams.results <- mapply(function(emissions, PM, y, x, z){
-    dataset <- make_dataset(emissions, PM, powerplant = y, monitor = x, lag = z)
-    return(gams.test(dataset,k1))
-  }, x = temp$Monitor, y = temp$PP, z = temp$lag,
+#   gams.results <- mapply(function(emissions, PM, y, x, z){
+#     dataset <- make_dataset(emissions, PM, powerplant = y, monitor = x, lag = z)
+#     return(gams.test(dataset,k1))
+#   }, x = temp$Monitor, y = temp$PP, z = temp$lag,
+#   MoreArgs = list(emissions = emissions, PM = PM))
+  
+  #use with distributed lag
+  gams.results <- mapply(function(emissions, PM, y, x){
+    dataset <- make_dataset_distLag(emissions, PM, powerplant = y, monitor = x)
+    return(gams.test_distLag(dataset,k1))
+  }, x = temp$Monitor, y = temp$PP,
   MoreArgs = list(emissions = emissions, PM = PM))
-  
-  
   
   coeff <- rep(NA, nrow(pairs))
   p.value <- rep(NA, nrow(pairs))
