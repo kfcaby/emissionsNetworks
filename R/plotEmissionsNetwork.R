@@ -1,34 +1,12 @@
 
-# plotDirections <- function(edges, region){
-#   potential.edges <- subset(edges, !(is.na(edge)) & PP.region == region) 
-#   probs <- potential.edges[ , list(sum(edge == 1,na.rm = TRUE)/sum(!is.na(edge))), by = "direction"]
-#   probs <- probs[complete.cases(probs),]
-#   probs[ , direction := factor(direction, levels = c("N","NE","E","SE","S","SW","W","NW"))]
-#   setkey(probs,direction)
-#   barplot(height = probs$V1, space = 0, main = paste("Edge Probability by Direction from Power Plant to Receptor (",region," Power Plants)", sep = ""))
-#   axis(1, labels = probs$direction, at = 1:(nrow(probs)) - 0.5)
-# }
-# 
-# plotRadial <- function(edges, region, samps){
-#   potential.edges <- subset(edges, !(is.na(edge)) & PP.region == region) 
-#   potential.edges <- potential.edges[sample(1:nrow(potential.edges),samps),]
-#   lines.lty <- ifelse(potential.edges$edge == 1, 1, 1)
-#   lines.lwd <- ifelse(potential.edges$edge == 1, 4, 0.25)
-#   lines.color <- ifelse(potential.edges$edge == 1, "green", "red")
-#   polar.plot(potential.edges$distance,potential.edges$bearing,main= paste(region,"Links", sep = " "),start = 90,
-#              lwd=lines.lwd,line.col= lines.color, clockwise = TRUE, 
-#              labels = c("N","NE","E","SE", "S","SW","W","NW"),
-#              label.pos = seq(0,315, by = 45))
-#   points(0,0, cex = 3, pch = 24, bg = "yellow")
-# }
-
 # exposure.type can be NA, continuous, binary
 # exposure.var can be avgPM, inmapPM, gams.coeff, num_edges
 plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgPM",
                                  exposure.binary.cutoff = 0.70, num.colors = 10, plot.edges = c(0,1000),
                                  main = " ", plot.diagnostics = FALSE,
                                  receptor.regions = c("Northeast","IndustrialMidwest","Southeast"),
-                                 plot.legend = TRUE, plot.close.powerplants = TRUE){
+                                 plot.legend = TRUE, plot.close.powerplants = TRUE,
+                                 xlim = NULL, ylim = NULL){
   
   
   edges <- subset(edges, receptor.region %in% receptor.regions)
@@ -52,11 +30,15 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
   US.names <- US$names
   US.IDs <- sapply(strsplit(US.names,":"),function(x) x[1])
   US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
-  plot(US_poly_sp)
-  title(main, line = -3, adj = 0.70)
   
- 
-  
+  if(is.null(ylim)){
+    plot(US_poly_sp)
+  } else {
+    plot(US_poly_sp, ylim = ylim, xlim = xlim)
+  }
+    
+  title(main, line = -3, adj = 0.75, cex.main = 2)
+   
   #determine colors of monitors
   if(is.na(exposure.type) || !exposure.type %in% c("binary","continuous")){
     bg.monitor <- "black"
@@ -78,11 +60,15 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
     }
     
     if(exposure.var == "gams.coeff"){
-      exposure <- edges[ , sum(get(exposure.var)*edge, na.rm = TRUE), by = "Monitor"]$V1
+      exposure <- edges[ , sum(get(exposure.var)*edge*avgemissions, na.rm = TRUE), by = "Monitor"]$V1
     }
     
     if(exposure.var == "num_edges"){
       exposure <- edges[ , sum(edge, na.rm = TRUE) , by = "Monitor"]$V1
+    }
+    
+    if(exposure.var == "dist_emissions"){
+      exposure <- edges[ , sum(avgemissions*(1/log(distance))*edge, na.rm = TRUE) , by = "Monitor"]$V1
     }
     
     if(exposure.type == "continuous"){
