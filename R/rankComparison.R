@@ -8,7 +8,7 @@ rankComparison <- function(edges, var1, var2, regions = c("Northeast","Southeast
   
   setkey(edges, Monitor)
   if(var1 == "gams.coeff"){
-    var1.monitor <- edges[ , list(V1 = sum(get(var1)*edge, na.rm = TRUE),
+    var1.monitor <- edges[ , list(V1 = sum(get(var1)*edge*avgemissions, na.rm = TRUE),
                                   receptor.state = unique(receptor.state)),
                           by = "Monitor"]
     include <- which(var1.monitor$V1 > 0)
@@ -23,9 +23,35 @@ rankComparison <- function(edges, var1, var2, regions = c("Northeast","Southeast
                                   receptor.state = unique(receptor.state)),
                           by = "Monitor"]
   }
+  if(var1 == "num_edges"){
+    var1.monitor <- edges[ , list(V1 = sum(edge, na.rm = TRUE),
+                                  receptor.state = unique(receptor.state)),
+                          by = "Monitor"]
+    include <- which(var1.monitor$V1 > 0)
+  }
+  if(var1 == "avgemissions"){
+    var1.monitor <- edges[ , list(V1 = sum(log(avgemissions)*edge, na.rm = TRUE),
+                                  receptor.state = unique(receptor.state)),
+                          by = "Monitor"]
+    include <- which(var1.monitor$V1 > 0)
+  }
+  if(var1 == "InMAPedge"){
+    var1.monitor <- edges[ , list(V1 = sum(inmapPM*edge, na.rm = TRUE),
+                                  receptor.state = unique(receptor.state)),
+                          by = "Monitor"]
+    include <- which(var1.monitor$V1 > 0)
+  }
+  if(var1 == "dist_emissions"){
+    var1.monitor <- edges[ , list(V1 = sum(avgemissions*(1/log(distance))*edge, na.rm = TRUE),
+                                  receptor.state = unique(receptor.state)),
+                          by = "Monitor"]
+    include <- which(var1.monitor$V1 > 0)
+  }
+  
+  
   
   if(var2 == "gams.coeff"){
-    var2.monitor <- edges[ , sum(get(var2)*edge, na.rm = TRUE), by = "Monitor"]$V1
+    var2.monitor <- edges[ , sum(get(var2)*edge*avgemissions, na.rm = TRUE), by = "Monitor"]$V1
     include <- which(var2.monitor$V1 > 0)
   } 
   if(var2 == "avgPM") { 
@@ -38,8 +64,21 @@ rankComparison <- function(edges, var1, var2, regions = c("Northeast","Southeast
                                   receptor.state = unique(receptor.state)),
                           by = "Monitor"]
   }
-  
-  
+  if(var2 == "num_edges"){
+    var2.monitor <- edges[ , list(V1 = sum(edge, na.rm = TRUE),
+                                  receptor.state = unique(receptor.state)),
+                          by = "Monitor"]
+  }
+  if(var2 == "avgemissions"){
+    var2.monitor <- edges[ , list(V1 = sum(avgemissions*edge, na.rm = TRUE),
+                          receptor.state = unique(receptor.state)),
+  by = "Monitor"]
+  }
+  if(var2 == "InMAPedge"){
+    var2.monitor <- edges[ , list(V1 = sum(inmapPM*edge, na.rm = TRUE),
+                                  receptor.state = unique(receptor.state)),
+                          by = "Monitor"]
+  }
   
   correlation <- cor(rank(var1.monitor[include,V1]), rank(var2.monitor[include,V1]))
 #   plot(rank(var1.monitor$V1),rank(var2.monitor$V1), 
