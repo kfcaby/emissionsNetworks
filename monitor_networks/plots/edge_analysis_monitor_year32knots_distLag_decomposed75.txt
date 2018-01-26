@@ -1,0 +1,34 @@
+[1] "Number of edges in the network: 20456"
+[1] "Number of possible edges in the network: 284016"
+[1] "The edge density is: 0.166"
+[1] "Percent of GAMS models failing: 0 %"
+[1] ""
+[1] "Power Plants"
+[1] "Total: 388"
+[1] "With at least some emissions: 388"
+[1] "With at least one linked monitor: 259"
+[1] "Median number of linked monitors: 3"
+[1] "The probability of an edge occurring from a power plant"
+[1] "by size and region (1 = 80th percentile)"
+          PP.region     0     1
+1 IndustrialMidwest 0.208 0.226
+2         Northeast 0.157 0.150
+3         Northwest 0.000   NaN
+4         Southeast 0.076 0.067
+5         Southwest 0.231 0.044
+6      UpperMidwest 0.196 0.105
+[1] "The number of power plants by region"
+          PP.region  0  1
+1 IndustrialMidwest 88 37
+2         Northeast 52 11
+3         Northwest 30  1
+4         Southeast 52 21
+5         Southwest 26  4
+6      UpperMidwest 62  4
+[1] ""
+[1] "Monitors"
+[1] "Total: 732"
+[1] "With at least one PM measurement: 651"
+[1] "With at least one linked powerplant: 640"
+[1] "Median number of linked powerplants: 23.5"
+[1] "Median number of linked powerplants: 23.5"
