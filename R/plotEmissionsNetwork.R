@@ -126,8 +126,13 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
   
     edges.to.plot <- subset(edges, edge == 1 & distance > plot.edges[1] & distance < plot.edges[2])
     
-    color.index <- 4 - edges.to.plot$lag
-    color.index <- ifelse(color.index < 1, 1, color.index)
+    edges.to.plot[ , distance_cat := ifelse(distance <= 250, 1, 
+                                    ifelse(distance <= 500, 2,
+                                           ifelse(distance <= 750, 3,
+                                                  ifelse(distance <= 1000, 4, NA))))]
+    
+    color.index <- 5 - edges.to.plot$distance_cat
+    #color.index <- ifelse(color.index < 1, 1, color.index)
     
     segments(edges.to.plot$receptor.longitude,
              edges.to.plot$receptor.latitude,
@@ -169,8 +174,8 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
     
     #plot edges legend when edges were plotted 
     if(plotted.edges == TRUE){
-      legend(x = -74.06, y = 38.94, 
-             legend = c("lag 0 edge","lag 1 edge","lag 2 edge", "lag 3 edge"),
+      legend(x = -74.06, y = 38.94, title = "Edge distance",
+             legend = c("0-250km","250-500km","500-750km", "750-1000km"),
              col = rev(viridis(4)),
              lty = 1, lwd = 2, cex = 1.5)
     }
