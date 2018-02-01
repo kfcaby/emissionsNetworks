@@ -79,7 +79,7 @@ rankComparison <- function(edges, var1, var2, regions = c("Northeast","Southeast
                                   receptor.state = unique(receptor.state)),
                           by = "Monitor"]
   }
-  
+
   correlation <- cor(rank(var1.monitor[include,V1]), rank(var2.monitor[include,V1]))
 #   plot(rank(var1.monitor$V1),rank(var2.monitor$V1), 
 #        xlab= paste("Ranked Exposure ",var1, sep = ""),
@@ -96,7 +96,7 @@ rankComparison <- function(edges, var1, var2, regions = c("Northeast","Southeast
   var1.monitor[ , receptor.state := ifelse(receptor.state %in% c("MS","AL","LA"),
                                          "AL/MS/LA", receptor.state)]
   
-  include <- which(!is.na(var2.monitor$V1))
+  #include <- which(!is.na(var2.monitor$V1))
   comparison <- data.frame(var1.rank = rank(var1.monitor[include, V1]), 
                            var2.rank = rank(var2.monitor[include, V1]),
                            receptor.state = factor(var1.monitor[include,receptor.state],
