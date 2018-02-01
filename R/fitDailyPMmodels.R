@@ -37,7 +37,7 @@ gams.test <- function(dataset, k1 = 3){
   )
 }
 
-make_dataset_distLag <- function(emissions, PM, monitor, powerplant){
+make_dataset_distLag <- function(emissions, PM, temperature, monitor, powerplant, adjust.temp = FALSE){
   x0 <- emissions[powerplant, ]
   x1 <- c(NA,x0[-length(x0)])
   x2 <- c(NA,NA,x0[-1*(length(x0)-1):length(x0)])
@@ -45,14 +45,26 @@ make_dataset_distLag <- function(emissions, PM, monitor, powerplant){
   y <- PM[monitor, ]
   time <- 1:length(x0)
   date <- colnames(emissions)
-  dataset <- data.frame(time,y,x0,x1,x2,x3,date)
+  if(adjust.temp == TRUE){
+    temp_monitor <- temperature[monitor,]
+    dataset <- data.frame(time,y,x0,x1,x2,x3,date,temp_monitor)
+  }
+  if(adjust.temp == FALSE){
+    dataset <- data.frame(time,y,x0,x1,x2,x3,date)
+  }
   return(dataset)
 }
 
-gams.test_distLag <- function(dataset, k1 = 3){
+gams.test_distLag <- function(dataset, k1 = 3, adjust.temp = FALSE){
   tryCatch({
-    model <- gam(log(y) ~ s(time, bs = "cr", k = k1) + x0 + x1 + x2 + x3 + weekdays(as.Date(date)), 
+    if(adjust.temp == TRUE){
+      model <- gam(log(y) ~ s(time, bs = "cr", k = k1) + x0 + x1 + x2 + x3 + weekdays(as.Date(date)) + s(temp_monitor, bs = "cr", k = 10), 
                  data = dataset, family = gaussian, na.action = na.omit)
+    }
+    if(adjust.temp == FALSE){
+      model <- gam(log(y) ~ s(time, bs = "cr", k = k1) + x0 + x1 + x2 + x3 + weekdays(as.Date(date)), 
+                   data = dataset, family = gaussian, na.action = na.omit)
+    }
     sum.coeff <- sum(summary(model)$p.coeff[2:5])
     cov.mat <- vcov(model)[2:5,2:5]    
     var.sum <- sum(diag(cov.mat)) + sum(2*cov.mat[lower.tri(cov.mat)])
@@ -63,11 +75,12 @@ gams.test_distLag <- function(dataset, k1 = 3){
 }
 
 
-fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations ,start.date, end.date, 
+fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations, temperature, start.date, end.date, 
                              percent.of.powerplants = 100, alpha = 0.05, p.adjust.method = "BH",
                              lag = "distance_dependent", k1 = 3, plot.pvalues = FALSE, wind.speed = 13,
                              max.distance = 2000, 
-                             receptor.regions = c("IndustrialMidwest","Northeast","Southeast")){
+                             receptor.regions = c("IndustrialMidwest","Northeast","Southeast"),
+                             adjust.temp = FALSE){
 
   require(mgcv)
   require(geosphere)
@@ -83,6 +96,7 @@ fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations ,start.dat
   #Subset emissions and PM by start and end date
   emissions <- emissions[ ,as.Date(colnames(emissions)) >= start.date & as.Date(colnames(emissions)) <= end.date]
   PM <- PM[ ,as.Date(colnames(PM)) >= start.date & as.Date(colnames(PM)) <= end.date]
+  temperature <- temperature[ ,as.Date(colnames(temperature)) >= start.date & as.Date(colnames(temperature)) <= end.date]
   
   #Take only biggest emitters
   emissions <- emissions[rowSums(emissions, na.rm = TRUE) > quantile(rowSums(emissions, na.rm = TRUE), 1 - percent.of.powerplants/100),]
@@ -105,6 +119,11 @@ fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations ,start.dat
   pairs$PP <- as.character(pairs$PP)
   pairs$Monitor <- as.character(pairs$Monitor)
   
+  #Remove this line when temperature is not adjusted for
+  if(adjust.temp == TRUE){
+    pairs <- subset(pairs, Monitor %in% rownames(temperature))
+  }
+  
   #compute the lag 
   pairs$lag <- ifelse(pairs$distance < max.distance, findInterval(pairs$distance,lag.breaks), NA)
   pairs <- data.table(pairs)
@@ -120,11 +139,11 @@ fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations ,start.dat
 #   MoreArgs = list(emissions = emissions, PM = PM))
   
   #use with distributed lag
-  gams.results <- mapply(function(emissions, PM, y, x){
-    dataset <- make_dataset_distLag(emissions, PM, powerplant = y, monitor = x)
-    return(gams.test_distLag(dataset,k1))
+  gams.results <- mapply(function(emissions, PM, temperature, adjust.temp, y, x){
+    dataset <- make_dataset_distLag(emissions, PM, temperature, adjust.temp, powerplant = y, monitor = x)
+    return(gams.test_distLag(dataset,k1, adjust.temp))
   }, x = temp$Monitor, y = temp$PP,
-  MoreArgs = list(emissions = emissions, PM = PM))
+  MoreArgs = list(emissions = emissions, PM = PM, temperature = temperature, adjust.temp = adjust.temp))
   
   coeff <- rep(NA, nrow(pairs))
   p.value <- rep(NA, nrow(pairs))
@@ -163,7 +182,9 @@ fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations ,start.dat
   pairs$receptor.region <- M_locations[pairs$Monitor,]$receptor.region
   
   pairs[ , avgPM := rowMeans(PM[Monitor,], na.rm = TRUE)]
+  pairs[ , sdPM := apply(PM[Monitor,], 1, sd, na.rm = TRUE)]
   pairs[ , avgemissions := rowMeans(emissions[PP ,], na.rm = TRUE)]
+  pairs[ , sdemissions := apply(emissions[PP,], 1, sd, na.rm = TRUE)] 
   pairs[ , PM.NAdays := rowSums(is.na(PM[Monitor,]))]
   pairs[ , emissions.NAdays := rowSums(is.na(emissions[PP,]))]
   pairs[ , total.days := as.numeric(end.date - start.date)]
