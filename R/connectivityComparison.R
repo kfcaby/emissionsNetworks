@@ -30,6 +30,7 @@ connectivityComparison <- function(edges, var1, var2, softPower = 10, regions = 
   plot(rankConn.var1,rankConn.var2, 
        xlab= paste("Ranked Connectivity ",var1, sep = ""),
        ylab = paste("Ranked Connectivity ",var2, sep = ""), 
-       main = paste(paste(regions, collapse = ", "),"correlation =",round(correlation,2), sep = " ")) 
+       main = paste(paste(regions, collapse = ", "),"correlation =",round(correlation,2), sep = " "),
+       cex.lab = 2, cex = 2, cex.main = 2, cex.axis = 2) 
 }
 
