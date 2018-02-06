@@ -22,7 +22,10 @@ import_edges <- function(unit.type = "monitor", season = "summer", PM.type = "ra
   setkey(inmap, PP, Monitor)
   setkey(edges, PP, Monitor)
   edges <- inmap[edges]
-    
+  
+  
+  
+  
   return(edges)
 }
   
