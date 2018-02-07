@@ -1,3 +1,6 @@
+#tables and figures for paper
+#Note: need to import edges using edge_analysis_workflow before running this code.
+
 library(xtable)
 library(ggplot2)
 library(directlabels)
