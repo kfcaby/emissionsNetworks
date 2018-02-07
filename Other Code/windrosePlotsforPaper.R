@@ -184,7 +184,7 @@ legend <- g_legend(p13)
 blank <- rectGrob(gp = gpar(col = "white"))
 
 
-pdf(file = "results/windrose_plots.pdf", width = 5.5, height = 7)
+pdf(file = "results/windrose_plots.pdf", width = 6.5, height = 8)
 grid.arrange(arrangeGrob(p13+theme(legend.position = "none"),p16,p1,p4,p7,p10, ncol = 1, 
                          top = textGrob("IndustrialMidwest",gp = gpar(fontsize = 12))), 
              arrangeGrob(p14+theme(legend.position = "none"),p17,p2,p5,p8,p11, ncol = 1,
