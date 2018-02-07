@@ -84,11 +84,15 @@ dcast(edges[!is.na(edge) & PP.region %in% c("IndustrialMidwest","Northeast","Sou
       value.var = "edge")
 
 #edge percent by distance
-edges[!is.na(edge), list(perc = sum(edge)/length(edge)), by = "distance_cat"]
+distance_summary <- edges[!is.na(edge), list(perc = sum(edge)/length(edge)), by = "distance_cat"]
+setkey(distance_summary, distance_cat)
+distance_summary
+
+sum(edges$edge, na.rm = TRUE)/nrow(edges[!is.na(edge),])
 
 edges[!is.na(edge), list(perc = sum(edge)/length(edge),
-                         sdemissions = mean(avgemissions/sdemissions),
-                         missing = median(emissions.NAdays)), by = "powerplant_cat"]
+                         median_distance = median(distance)),
+                         by = "powerplant_cat"]
 
 #edge percent by power plant size
 PP_size_summary <-edges[!is.na(edge), list(perc = sum(edge)/length(edge),
@@ -116,6 +120,7 @@ edge_summary$direction <- paste(region_abbr(edge_summary$PP.region),"-",
 edge_summary$distance_label <- dist_labels(edge_summary$distance_cat)
 
 # Edge percents by orientation and distance plot for paper
+#Plot Cory doesn't like
 #pdf(file = "Other Plots/edges_by_dist.pdf", width = 5.5, height = 4)
 ggplot(edge_summary, aes(x = distance_label, y = edge.percent, color = PP.region)) + 
   geom_line(aes(group = direction)) +
@@ -125,15 +130,34 @@ ggplot(edge_summary, aes(x = distance_label, y = edge.percent, color = PP.region
   theme(
       text = element_text(size = 12),
       legend.position = "bottom"
-    ) + ylim(0,0.35) +
+    ) + ylim(0,0.5) +
   labs(x = "Distance from power plant to monitor", y = "Percent of power plant/monitor pairs")
 #dev.off()
 
-plotEmissionsNetwork(subset(edges, PP.region == "IndustrialMidwest" & receptor.region == "Northeast" & distance_cat == 4))
-
-NA_summary <- powerplants[ , list(emissions.NAdays = median(emissions.NAdays)), by = c("PP.region","powerplant_cat")]
-setkey(NA_summary, PP.region,powerplant_cat)
-NA_summary
+#blank map for paper
+pdf(file = "results/blankmap.pdf", height = 4)
+dft <- par("mar")
+par(mar = c(0,0,0,0))
+US <- map("state",fill=TRUE, plot=FALSE)
+US.names <- US$names
+US.IDs <- sapply(strsplit(US.names,":"),function(x) x[1])
+US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
+plot(US_poly_sp)
+setkey(edges, Monitor)
+points(edges[J(unique(Monitor)), c("receptor.longitude","receptor.latitude"), mult = "first"],
+       pch = 21, bg = "black")
+setkey(edges,PP)
+emissions <- edges[J(unique(PP)), "avgemissions", mult = "first"]$avgemissions
+pp.cex <- ifelse(emissions < quantile(emissions, 0.8), 0.6, 1.25)
+points(edges[J(unique(PP)), c("PP.longitude","PP.latitude"), mult = "first"],
+       pch = 24, bg = viridis(2)[2], col = "black", lwd = 1, cex = pp.cex)
+legend(x = -78.8, y = 33.5, 
+       legend = c("coal power plant","AQS monitor"),
+       pch = c(24,21),
+       pt.cex = c(1.25,1),
+       pt.bg = c(viridis(2)[2],"black"),
+       cex = 1, bty = "n")
+dev.off()
 
 #Exposure map for paper
 #pdf(file = "results/exposure_map.pdf", width = 22, height = 9)
@@ -157,50 +181,3 @@ p3 <- rankComparison(edges, var1 = "dist_emissions", var2 = "avgPM", regions = "
 blank <- rectGrob(gp = gpar(col = "white"))
 grid.arrange(p1,p2,p3, ncol = 1)
 dev.off()
-
-# for(region in c("IndustrialMidwest","Northeast", "Southeast")){
-#   pdf(file = paste("results/monitor_edges_",region,".pdf", sep = ""), width = 22, height = 9)
-#   plotEmissionsNetwork(edges, plot.diagnostics = FALSE, main = "", receptor.regions = region, plot.legend = FALSE)
-#   dev.off()
-# }
-
-# for(region in c("IndustrialMidwest","Northeast", "Southeast")){
-#   pdf(file = paste("results/powerplant_edges_",region,".pdf", sep = ""), width = 22, height = 9)
-#   plotEmissionsNetwork(subset(edges, PP.region == region), plot.diagnostics = FALSE, main = "", plot.legend = FALSE)
-#   dev.off()
-# }
-
-# #windrose plots
-# 
-# pdf(file = "results/windrose_plots.pdf", width = 6.5, height = 2)
-# p1 <- plot.windrose(edges, regions = "Northeast", title = "Northeast", plot.legend = FALSE)
-# p2 <- plot.windrose(edges, regions = "IndustrialMidwest", title = "Industrial Midwest", plot.legend = FALSE)
-# p3 <- plot.windrose(edges, regions = "Southeast", title = "Southeast", plot.legend = FALSE)
-# grid.arrange(p2,p1,p3, ncol = 3)
-# 
-# p1 <- plot.windrose(edges, regions = "Northeast", stat = "prob", title = "", plot.legend = FALSE)
-# p2 <- plot.windrose(edges, regions = "IndustrialMidwest", stat = "prob", title = "", plot.legend = FALSE)
-# p3 <- plot.windrose(edges, regions = "Southeast", stat = "prob", title = "", plot.legend = FALSE)
-# grid.arrange(p2,p1,p3, ncol = 3)
-# 
-# p1 <- plot.windrose(edges, regions = "Northeast", stat = "prob", title = "", distlim = c(0,250), plot.legend = FALSE)
-# p2 <- plot.windrose(edges, regions = "IndustrialMidwest", stat = "prob", title = "", distlim = c(0,250), plot.legend = FALSE)
-# p3 <- plot.windrose(edges, regions = "Southeast", stat = "prob", title = "", distlim = c(0,250), plot.legend = FALSE)
-# grid.arrange(p2,p1,p3, ncol = 3)
-# 
-# p1 <- plot.windrose(edges, regions = "Northeast", stat = "prob", title = "", distlim = c(250,500), plot.legend = FALSE)
-# p2 <- plot.windrose(edges, regions = "IndustrialMidwest", stat = "prob", title = "", distlim = c(250,500), plot.legend = FALSE)
-# p3 <- plot.windrose(edges, regions = "Southeast", stat = "prob", title = "", distlim = c(250,500), plot.legend = FALSE)
-# grid.arrange(p2,p1,p3, ncol = 3)
-# 
-# p1 <- plot.windrose(edges, regions = "Northeast", stat = "prob", title = "", distlim = c(500,750), plot.legend = FALSE)
-# p2 <- plot.windrose(edges, regions = "IndustrialMidwest", stat = "prob", title = "", distlim = c(500,750), plot.legend = FALSE)
-# p3 <- plot.windrose(edges, regions = "Southeast", stat = "prob", title = "", distlim = c(500,750), plot.legend = FALSE)
-# grid.arrange(p2,p1,p3, ncol = 3)
-# 
-# p1 <- plot.windrose(edges, regions = "Northeast", stat = "prob", title = "", distlim = c(750,1000), plot.legend = FALSE)
-# p2 <- plot.windrose(edges, regions = "IndustrialMidwest", stat = "prob", title = "", distlim = c(750,1000), plot.legend = FALSE)
-# p3 <- plot.windrose(edges, regions = "Southeast", stat = "prob", title = "", distlim = c(750,1000), plot.legend = FALSE)
-# grid.arrange(p2,p1,p3, ncol = 3)
-# 
-# dev.off()
