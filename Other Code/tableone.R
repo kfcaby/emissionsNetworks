@@ -29,7 +29,9 @@ edges[ , distance_cat := ifelse(distance <= 250, 1,
 
 edges[ , powerplant_cat := ifelse(avgemissions >= quantile(avgemissions, 0.80),2,1 )]
 
-
+## ------------------------------------------------------------------------------------ ##
+##   Table for Monitor/Power Plant Summary                                              ##
+## ------------------------------------------------------------------------------------ ##
 
 #Monitors
 monitors <- edges[ , list(Monitor = unique(Monitor), avgPM = unique(avgPM),
@@ -76,35 +78,9 @@ sink(file = "results/tableone.tex")
 print(summary, include.rownames = FALSE, hline.after = c(-1,0,4, nrow(summary)))
 sink()
 
-
-#edge analysis
-dcast(edges[!is.na(edge) & PP.region %in% c("IndustrialMidwest","Northeast","Southeast") ,], 
-      PP.region ~ receptor.region, 
-      fun = function(x) round(sum(edge)/length(edge),2),
-      value.var = "edge")
-
-#edge percent by distance
-distance_summary <- edges[!is.na(edge), list(perc = sum(edge)/length(edge)), by = "distance_cat"]
-setkey(distance_summary, distance_cat)
-distance_summary
-
-sum(edges$edge, na.rm = TRUE)/nrow(edges[!is.na(edge),])
-
-edges[!is.na(edge), list(perc = sum(edge)/length(edge),
-                         median_distance = median(distance)),
-                         by = "powerplant_cat"]
-
-#edge percent by power plant size
-PP_size_summary <-edges[!is.na(edge), list(perc = sum(edge)/length(edge),
-                                           median_distance = median(distance)), by = c("powerplant_cat","distance_cat")]
-setkey(PP_size_summary, distance_cat)
-PP_size_summary
-
-#median distance summary
-median_dist <- edges[!is.na(edge), list(median_distance = median(distance)), by = c("powerplant_cat","distance_cat")]
-setkey(median_dist)
-median_dist
-
+## ------------------------------------------------------------------------------------ ##
+##   Old plot Cory doesn't like                                                         ##
+## ------------------------------------------------------------------------------------ ##
 
 #edge summary by power plant and receptor region
 edge_summary <- melt(dcast(edges[!is.na(edge) & PP.region %in% c("IndustrialMidwest","Northeast","Southeast") ,], 
@@ -133,6 +109,10 @@ ggplot(edge_summary, aes(x = distance_label, y = edge.percent, color = PP.region
     ) + ylim(0,0.5) +
   labs(x = "Distance from power plant to monitor", y = "Percent of power plant/monitor pairs")
 #dev.off()
+
+## ------------------------------------------------------------------------------------ ##
+##   Blank Map                                                                          ##
+## ------------------------------------------------------------------------------------ ##
 
 #blank map for paper
 pdf(file = "results/blankmap.pdf", height = 4)
@@ -170,10 +150,47 @@ legend(x = -79, y = 33.5,
        cex = 1, bty = "n")
 dev.off()
 
+## ------------------------------------------------------------------------------------ ##
+##   side-by-side maps for monitor exposure                                             ##
+## ------------------------------------------------------------------------------------ ##
+pdf(file = "results/exposure_map.pdf", height = 4)
+map("state", fill = FALSE, plot = TRUE)
+setkey(edges, Monitor)
+monitors <- edges[ , list(longitude = unique(receptor.longitude),
+                          latitude = unique(receptor.latitude),
+                          receptor.state = unique(receptor.state),
+                          exposure = sum(avgemissions*(1/distance)*edge, na.rm = TRUE),
+                          exposure_inmap = sum(inmapPM, na.rm = TRUE)),
+                   by = "Monitor"]
+monitors[ , exposure_std := (exposure - mean(exposure))/sd(exposure)]
+
+breaks = c(seq(min(monitors$exposure_std),3, by = 0.1),10000)
+monitors[ , exposure_interval :=  as.numeric(cut(exposure_std, breaks = breaks))]
+#monitors[is.na(exposure_interval), ]$exposure_interval <- 1
+num.colors = length(unique(monitors$exposure_interval))
+monitors[ , bg.monitor := rev(viridis(num.colors))[exposure_interval]]
+points(monitors[ , .(longitude,latitude)] ,pch = 21, bg = monitors$bg.monitor)
+dev.off()
+
+pdf(file = "results/inmap_map.pdf", height = 4)
+map("state", fill = FALSE, plot = TRUE)
+monitors[ , inmap_std := (exposure_inmap - mean(exposure_inmap))/sd(exposure_inmap)]
+breaks = seq(-1.5,3.1, by = 0.1)
+monitors[ , inmap_interval :=  as.numeric(cut(inmap_std, breaks = breaks))]
+monitors[ , bg.monitor.inmap := rev(viridis(length(breaks)-1))[inmap_interval]]
+points(monitors[ , .(longitude,latitude)] ,pch = 21, bg = monitors$bg.monitor.inmap, cex = 1.5)
+dev.off()
+
+hist(monitors$inmap_std, xlim = c(-3,3))
+hist(monitors$exposure_std, xlim = c(-3,3))
+
 #Exposure map for paper
 #pdf(file = "results/exposure_map.pdf", width = 22, height = 9)
 plotEmissionsNetwork(edges, exposure.type = "continuous", exposure.var = "dist_emissions", plot.edges = c(0,0))
+plotEmissionsNetwork(edges, exposure.type = "continuous", exposure.var = "inmapPM", plot.edges = c(0,0))
 #dev.off()
+
+plotEmissionsNetwork(edges[receptor.state == "NH",])
 
 #Inmap Comparison plot for paper
 pdf(file = "results/inmap_comparison.pdf", width = 9, height = 22)
