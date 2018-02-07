@@ -169,3 +169,38 @@ dev.off()
 #   plotEmissionsNetwork(subset(edges, PP.region == region), plot.diagnostics = FALSE, main = "", plot.legend = FALSE)
 #   dev.off()
 # }
+
+# #windrose plots
+# 
+# pdf(file = "results/windrose_plots.pdf", width = 6.5, height = 2)
+# p1 <- plot.windrose(edges, regions = "Northeast", title = "Northeast", plot.legend = FALSE)
+# p2 <- plot.windrose(edges, regions = "IndustrialMidwest", title = "Industrial Midwest", plot.legend = FALSE)
+# p3 <- plot.windrose(edges, regions = "Southeast", title = "Southeast", plot.legend = FALSE)
+# grid.arrange(p2,p1,p3, ncol = 3)
+# 
+# p1 <- plot.windrose(edges, regions = "Northeast", stat = "prob", title = "", plot.legend = FALSE)
+# p2 <- plot.windrose(edges, regions = "IndustrialMidwest", stat = "prob", title = "", plot.legend = FALSE)
+# p3 <- plot.windrose(edges, regions = "Southeast", stat = "prob", title = "", plot.legend = FALSE)
+# grid.arrange(p2,p1,p3, ncol = 3)
+# 
+# p1 <- plot.windrose(edges, regions = "Northeast", stat = "prob", title = "", distlim = c(0,250), plot.legend = FALSE)
+# p2 <- plot.windrose(edges, regions = "IndustrialMidwest", stat = "prob", title = "", distlim = c(0,250), plot.legend = FALSE)
+# p3 <- plot.windrose(edges, regions = "Southeast", stat = "prob", title = "", distlim = c(0,250), plot.legend = FALSE)
+# grid.arrange(p2,p1,p3, ncol = 3)
+# 
+# p1 <- plot.windrose(edges, regions = "Northeast", stat = "prob", title = "", distlim = c(250,500), plot.legend = FALSE)
+# p2 <- plot.windrose(edges, regions = "IndustrialMidwest", stat = "prob", title = "", distlim = c(250,500), plot.legend = FALSE)
+# p3 <- plot.windrose(edges, regions = "Southeast", stat = "prob", title = "", distlim = c(250,500), plot.legend = FALSE)
+# grid.arrange(p2,p1,p3, ncol = 3)
+# 
+# p1 <- plot.windrose(edges, regions = "Northeast", stat = "prob", title = "", distlim = c(500,750), plot.legend = FALSE)
+# p2 <- plot.windrose(edges, regions = "IndustrialMidwest", stat = "prob", title = "", distlim = c(500,750), plot.legend = FALSE)
+# p3 <- plot.windrose(edges, regions = "Southeast", stat = "prob", title = "", distlim = c(500,750), plot.legend = FALSE)
+# grid.arrange(p2,p1,p3, ncol = 3)
+# 
+# p1 <- plot.windrose(edges, regions = "Northeast", stat = "prob", title = "", distlim = c(750,1000), plot.legend = FALSE)
+# p2 <- plot.windrose(edges, regions = "IndustrialMidwest", stat = "prob", title = "", distlim = c(750,1000), plot.legend = FALSE)
+# p3 <- plot.windrose(edges, regions = "Southeast", stat = "prob", title = "", distlim = c(750,1000), plot.legend = FALSE)
+# grid.arrange(p2,p1,p3, ncol = 3)
+# 
+# dev.off()
