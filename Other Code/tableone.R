@@ -136,13 +136,24 @@ ggplot(edge_summary, aes(x = distance_label, y = edge.percent, color = PP.region
 
 #blank map for paper
 pdf(file = "results/blankmap.pdf", height = 4)
-dft <- par("mar")
 par(mar = c(0,0,0,0))
-US <- map("state",fill=TRUE, plot=FALSE)
+US <- map("state",fill=FALSE, plot=FALSE)
 US.names <- US$names
 US.IDs <- sapply(strsplit(US.names,":"),function(x) x[1])
-US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
-plot(US_poly_sp)
+IndustrialMidwest <- c("west virginia","ohio", "indiana", "illinois", "michigan",
+                       "wisconsin", "kentucky")
+Northeast <- c("rhode island", "massachusetts", "connecticut", "maine",
+               "new hampshire", "vermont", "new york","pennsylvania",
+               "new jersey", "delaware", "maryland", "virginia")
+Southeast <- c("north carolina", "south carolina", "tennessee", "georgia",
+               "alabama", "mississippi", "louisiana", "florida", "arkansas")
+col.region <- rep("white",length(US.IDs))
+col.region[US.IDs %in% IndustrialMidwest] <- viridis(4, alpha = 0.5)[1]
+col.region[US.IDs %in% Northeast] <- viridis(4, alpha = 0.5)[2]
+col.region[US.IDs %in% Southeast] <- viridis(4, alpha = 0.5)[3]
+map("state", fill = TRUE, col = col.region, plot = TRUE)
+#US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
+#plot(US_poly_sp)
 setkey(edges, Monitor)
 points(edges[J(unique(Monitor)), c("receptor.longitude","receptor.latitude"), mult = "first"],
        pch = 21, bg = "black")
@@ -151,8 +162,8 @@ emissions <- edges[J(unique(PP)), "avgemissions", mult = "first"]$avgemissions
 pp.cex <- ifelse(emissions < quantile(emissions, 0.8), 0.6, 1.25)
 points(edges[J(unique(PP)), c("PP.longitude","PP.latitude"), mult = "first"],
        pch = 24, bg = viridis(2)[2], col = "black", lwd = 1, cex = pp.cex)
-legend(x = -78.8, y = 33.5, 
-       legend = c("coal power plant","AQS monitor"),
+legend(x = -79, y = 33.5, 
+       legend = c("coal power\nplant","AQS monitor"),
        pch = c(24,21),
        pt.cex = c(1.25,1),
        pt.bg = c(viridis(2)[2],"black"),
