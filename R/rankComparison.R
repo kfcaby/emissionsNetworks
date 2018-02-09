@@ -42,7 +42,7 @@ rankComparison <- function(edges, var1, var2, regions = c("Northeast","Southeast
     include <- which(var1.monitor$V1 > 0)
   }
   if(var1 == "dist_emissions"){
-    var1.monitor <- edges[ , list(V1 = sum(avgemissions*(1/log(distance))*edge, na.rm = TRUE),
+    var1.monitor <- edges[ , list(V1 = sum(avgemissions*(1/distance)*edge, na.rm = TRUE),
                                   receptor.state = unique(receptor.state)),
                           by = "Monitor"]
     include <- which(var1.monitor$V1 > 0)

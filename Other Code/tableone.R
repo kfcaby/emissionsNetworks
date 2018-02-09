@@ -7,6 +7,12 @@ library(directlabels)
 library(viridis)
 library(extrafont)
 
+g_legend<-function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)
+}
 region_abbr <- Vectorize(function(region){
   if(region == "IndustrialMidwest") abbr <- "IMW"
   if(region == "Northeast") abbr <- "NE"
@@ -153,12 +159,13 @@ dev.off()
 ## ------------------------------------------------------------------------------------ ##
 ##   side-by-side maps for monitor exposure                                             ##
 ## ------------------------------------------------------------------------------------ ##
-pdf(file = "results/exposure_map.pdf", height = 4)
+#pdf(file = "results/exposure_map.pdf", height = 4)
 map("state", fill = FALSE, plot = TRUE)
 setkey(edges, Monitor)
 monitors <- edges[ , list(longitude = unique(receptor.longitude),
                           latitude = unique(receptor.latitude),
                           receptor.state = unique(receptor.state),
+                          receptor.region = unique(receptor.region),
                           exposure = sum(avgemissions*(1/distance)*edge, na.rm = TRUE),
                           exposure_inmap = sum(inmapPM, na.rm = TRUE)),
                    by = "Monitor"]
@@ -169,43 +176,139 @@ monitors[ , exposure_interval :=  as.numeric(cut(exposure_std, breaks = breaks))
 #monitors[is.na(exposure_interval), ]$exposure_interval <- 1
 num.colors = length(unique(monitors$exposure_interval))
 monitors[ , bg.monitor := rev(viridis(num.colors))[exposure_interval]]
-points(monitors[ , .(longitude,latitude)] ,pch = 21, bg = monitors$bg.monitor)
-dev.off()
+points(monitors[ , .(longitude,latitude)] ,pch = 21, bg = monitors$bg.monitor, cex = 1.25)
+#dev.off()
 
-pdf(file = "results/inmap_map.pdf", height = 4)
+#pdf(file = "results/inmap_map.pdf", height = 4)
 map("state", fill = FALSE, plot = TRUE)
 monitors[ , inmap_std := (exposure_inmap - mean(exposure_inmap))/sd(exposure_inmap)]
 breaks = seq(-1.5,3.1, by = 0.1)
 monitors[ , inmap_interval :=  as.numeric(cut(inmap_std, breaks = breaks))]
 monitors[ , bg.monitor.inmap := rev(viridis(length(breaks)-1))[inmap_interval]]
-points(monitors[ , .(longitude,latitude)] ,pch = 21, bg = monitors$bg.monitor.inmap, cex = 1.5)
-dev.off()
+points(monitors[ , .(longitude,latitude)] ,pch = 21, bg = monitors$bg.monitor.inmap, cex = 1.25)
+#dev.off()
 
 hist(monitors$inmap_std, xlim = c(-3,3))
 hist(monitors$exposure_std, xlim = c(-3,3))
 
-#Exposure map for paper
-#pdf(file = "results/exposure_map.pdf", width = 22, height = 9)
-plotEmissionsNetwork(edges, exposure.type = "continuous", exposure.var = "dist_emissions", plot.edges = c(0,0))
-plotEmissionsNetwork(edges, exposure.type = "continuous", exposure.var = "inmapPM", plot.edges = c(0,0))
-#dev.off()
 
-plotEmissionsNetwork(edges[receptor.state == "NH",])
+## ------------------------------------------------------------------------------------ ##
+##   rank comparisons for monitor exposure                                             ##
+## ------------------------------------------------------------------------------------ ##
+rankComp <- function(monitors, regions){
+  data <- monitors[(receptor.region %in% regions) & (exposure > 0), ]
+  
+  data[ , receptor.subregion := receptor.state]
+  data[ , receptor.subregion := ifelse(receptor.state %in% c("RI","CT","MA","ME","VT","NH"),
+                                           "N.Eng", receptor.subregion)]
+  data[ , receptor.subregion := ifelse(receptor.state %in% c("NJ","MD","DE","DC"),
+                                           "MidAtl", receptor.subregion)]
+  data[ , receptor.subregion := ifelse(receptor.state %in% c("GA","SC"),
+                                           "SC/GA", receptor.subregion)]
+  data[ , receptor.subregion := ifelse(receptor.state %in% c("MS","AL","LA"),
+                                           "AL/MS/LA", receptor.subregion)]
+  data[ , exposure_rank := rank(exposure)]
+  data[ , inmap_rank := rank(exposure_inmap)]
+  data$receptor.subregion = factor(data$receptor.subregion,
+                                       levels = rev(c("N.Eng","NY",
+                                                      "MidAtl","VA", "PA",
+                                                      "WI","IL","MI","IN","KY","OH","WV",
+                                                      "FL","LA","SC/GA","AL/MS/LA",
+                                                      "AR","NC","TN")))
+  print(data$receptor.subregion)
+  txt.size = 10
+  plot <- ggplot(data, aes(x = exposure_rank, y = inmap_rank, color = receptor.subregion)) + geom_point() + 
+    scale_color_viridis(discrete = TRUE, begin = 0, end = 1, name = "state") +
+    theme(legend.position = "right",
+          axis.title = element_text(size = txt.size),
+          axis.text = element_text(size = txt.size),
+          legend.text = element_text(size = txt.size),
+          legend.title = element_text(size = txt.size),
+          legend.justification = "top",
+          #  legend.key.size = unit(2, "line" ),
+          plot.title = element_text(size = txt.size + 2, hjust = 0.5)) +
+    labs(x = "emissions network", y = "InMAP", title = "")
+  
+  print(cor(data$exposure_rank, data$inmap_rank))
+  print(cor(data$exposure, data$exposure_inmap, method = "spearman"))
+  
+  return(plot)
+}
 
-#Inmap Comparison plot for paper
-pdf(file = "results/inmap_comparison.pdf", width = 9, height = 22)
-p1 <- rankComparison(edges, var1 = "dist_emissions", var2 = "inmapPM", regions = "IndustrialMidwest")
-p2 <-rankComparison(edges, var1 = "dist_emissions", var2 = "inmapPM", regions = "Northeast")
-p3 <- rankComparison(edges, var1 = "dist_emissions", var2 = "inmapPM", regions = "Southeast")
-blank <- rectGrob(gp = gpar(col = "white"))
-grid.arrange(p1,p2,p3, ncol = 1)
+p1 <- rankComp(monitors, regions = "IndustrialMidwest")
+pdf(file = "results/comparisonIMW.pdf", height = 2.5, width = 3.1)
+p1
 dev.off()
-           
-#avgPM Comparison plot for paper
-pdf(file = "results/avgPM_comparison.pdf", width = 9, height = 22)
-p1 <- rankComparison(edges, var1 = "dist_emissions", var2 = "avgPM", regions = "IndustrialMidwest")
-p2 <-rankComparison(edges, var1 = "dist_emissions", var2 = "avgPM", regions = "Northeast")
-p3 <- rankComparison(edges, var1 = "dist_emissions", var2 = "avgPM", regions = "Southeast")
-blank <- rectGrob(gp = gpar(col = "white"))
-grid.arrange(p1,p2,p3, ncol = 1)
+
+#without Michigan and Ohio
+rankComp(monitors[!(receptor.state %in% c("MI","OH"))  ,], regions = "IndustrialMidwest")
+
+p2 <- rankComp(monitors, regions = "Northeast")
+pdf(file = "results/comparisonNE.pdf", height = 2.5, width = 3.35)
+p2
 dev.off()
+
+#excluding western Penn.
+rankComp(monitors[!(receptor.state %in% c("PA") & longitude < -77.7),], regions = "Northeast")
+
+p3 <- rankComp(monitors, regions = "Southeast")
+pdf(file = "results/comparisonSE.pdf", height = 2.5, width = 3.65)
+p3
+dev.off()
+
+## ------------------------------------------------------------------------------------ ##
+##   ROC curve for edges and InMAP PM                                                   ##
+## ------------------------------------------------------------------------------------ ##
+
+getROC <- function(edges, p){
+  #function return false positive rate and true positive rate for different cutoffs
+  roc <- Vectorize(function(edges, p){
+    complete_edges <- edges[!is.na(edge) & !is.na(inmapPM),]
+    
+    #TRUE
+    network_edges <- complete_edges$edge
+    #PREDICTED
+    inmap_edges <- ifelse(complete_edges$inmapPM >= quantile(complete_edges$inmapPM,p),1,0)
+    
+    #false positives
+    false_pos <- sum(ifelse(inmap_edges == 1 & network_edges == 0, 1, 0))
+    # true negatives
+    true_neg <- sum(ifelse(inmap_edges == 0 & network_edges == 0, 1, 0))
+    
+    #false positive rate
+    FPR <- false_pos/(false_pos + true_neg)
+    
+    
+    #true positives
+    true_pos <- sum(ifelse(inmap_edges == 1 & network_edges == 1, 1, 0))
+    #false negatives
+    false_neg <- sum(ifelse(inmap_edges == 0 & network_edges == 1, 1, 0))
+    
+    #true positive rate
+    TPR <- true_pos/(true_pos + false_neg)
+    
+    return(c(FPR,TPR))
+  }, vectorize.args = "p")
+  
+  rates <- roc(edges,p)
+  #format output
+  rates <- data.frame(p = p,FPR = rates[1 ,], TPR = rates[2, ])
+  return(rates)
+}
+
+
+ratesIMW <- getROC(edges[receptor.region == "IndustrialMidwest", ], seq(0.1,0.9,0.02))
+rocIMW <- ggplot(ratesIMW, aes(x = FPR, y = TPR, color = p)) + geom_point() +
+  theme_bw() + geom_abline(slope = 1, intercept = 0) + scale_color_viridis()
+
+ratesNE <- getROC(edges[receptor.region == "Northeast", ], seq(0.1,0.9,0.02))
+rocNE <- ggplot(ratesIMW, aes(x = FPR, y = TPR, color = p)) + geom_point() +
+  theme_bw() + geom_abline(slope = 1, intercept = 0) + scale_color_viridis()
+
+ratesSE <- getROC(edges[receptor.region == "Southeast", ], seq(0.1,0.9,0.02))
+rocSE <- ggplot(ratesIMW, aes(x = FPR, y = TPR, color = p)) + geom_point() +
+  theme_bw() + geom_abline(slope = 1, intercept = 0) + scale_color_viridis()
+
+grid.arrange(rocIMW + theme(legend.position = "none"),
+             rocNE + theme(legend.position = "bottom"),
+             rocSE + theme(legend.position = "none"), ncol = 3)
