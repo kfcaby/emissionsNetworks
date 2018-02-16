@@ -1,3 +1,5 @@
+
+
 emissions2005 <- emissions[ , as.Date(colnames(emissions)) >= "2005-01-01" & as.Date(colnames(emissions)) <= "2005-12-31"]
 
 emissions2005 <- data.table(t(emissions2005), keep.rownames = TRUE)
