@@ -187,8 +187,18 @@ fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations, temperatu
   pairs[ , sdemissions := apply(emissions[PP,], 1, sd, na.rm = TRUE)] 
   pairs[ , PM.NAdays := rowSums(is.na(PM[Monitor,]))]
   pairs[ , emissions.NAdays := rowSums(is.na(emissions[PP,]))]
+  pairs[ , emissions.ZeroDays := rowSums(emissions[PP,] == 0, na.rm = TRUE)]
   pairs[ , total.days := as.numeric(end.date - start.date)]
   
+
+  pairs[ , distance_cat := ifelse(distance <= 250, 1, 
+                                ifelse(distance <= 500, 2,
+                                       ifelse(distance <= 750, 3,
+                                              ifelse(distance <= 1000, 4, NA))))]
+
+  pairs[ , powerplant_cat := ifelse(avgemissions >= quantile(avgemissions, 0.80),2,1 )]
+
+
   setkey(pairs, Monitor, PP)
   
   pairs$bearing <- bearing(cbind(pairs$PP.longitude,pairs$PP.latitude),
