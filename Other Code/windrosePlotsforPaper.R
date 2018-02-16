@@ -6,9 +6,14 @@ require(gridExtra)
 require(grid)
 require(cowplot)
 
-createWindroseData <- function(edges, regions, distlim = c(0,1000)){
+createWindroseData <- function(edges, regions, distlim = c(0,1000), center = "monitors"){
   edges_subset <- edges[!is.na(edge), ]
-  edges_subset <- edges_subset[receptor.region %in% regions, ]
+  if(center == "monitors"){
+    edges_subset <- edges_subset[receptor.region %in% regions, ]
+  }
+  if(center == "powerplants"){
+    edges_subset <- edges_subset[PP.region %in% regions, ]
+  }
   edges_subset <- edges_subset[distance >= distlim[1] & distance <= distlim[2], ]
   
   distance <- edges_subset$distance
@@ -16,7 +21,13 @@ createWindroseData <- function(edges, regions, distlim = c(0,1000)){
   
   # calculate back azimuth (input is currently direction from PP to source)
   # we want the reverse direction
-  dir <- ifelse(edges_subset$bearing < 180, edges_subset$bearing + 180, edges_subset$bearing -180)
+  if(center == "monitors"){
+    dir <- ifelse(edges_subset$bearing < 180, edges_subset$bearing + 180, edges_subset$bearing -180)
+  }
+  if(center == "powerplants"){
+    dir <- edges_subset$bearing
+  }
+  
   dir <- ifelse(dir > 345, dir - 360, dir)
   
   if (is.numeric(distance) & is.numeric(dir)){
@@ -57,15 +68,17 @@ createWindroseData <- function(edges, regions, distlim = c(0,1000)){
   return(data)
 }
 
-plotPairCounts <- function(edges, regions, title = ""){
-  data <- createWindroseData(edges, regions = regions)
+plotPairCounts <- function(edges, regions, title = "", center = "monitors"){
+  data <- createWindroseData(edges, regions = regions, center = center)
   txt.size = 12
+  if(center == "monitors") {legend.title <- "monitor to power plant distance (km)"}
+  if(center == "powerplants") {legend.title <- "power plant to monitor distance (km)"}
   plot <- ggplot(data = data,aes(x = dir.binned, fill = distance.binned)) +
     geom_bar() + 
     scale_x_discrete(drop = FALSE,
                      labels = c("N","","","E","","","S","","","W","","")) + 
     coord_polar(start = -((30/2)/360) * 2*pi) +
-    scale_fill_manual(name = "monitor to power plant distance (km)",
+    scale_fill_manual(name = legend.title,
                       labels = c("750-1000","500-750","250-500","0-250"),
                       values = viridis(4),
                       drop = FALSE) +
@@ -88,8 +101,8 @@ plotPairCounts <- function(edges, regions, title = ""){
   return(plot)
 }
 
-plotEdgeProbs <- function(edges, regions){
-  data <- createWindroseData(edges, regions = regions)
+plotEdgeProbs <- function(edges, regions, center = "monitors"){
+  data <- createWindroseData(edges, regions = regions, center = center)
   data_summary <- data[ , list(prob = sum(prob)),
                         by = c("distance.binned","dir.binned")]
   txt.size = 12
@@ -129,9 +142,9 @@ g_legend<-function(a.gplot){
   return(legend)
 }
 
+data <- createWindroseData(edges[distance_cat == 4, ], regions = "Northeast")
 
-
-#FIX SPACE BETWEEN PLOTS
+#Monitor Center
 
 p13 <- plotPairCounts(edges[distance < 1000, ], regions = "IndustrialMidwest")
 p14 <- plotPairCounts(edges[distance < 1000, ], regions = "Northeast")
@@ -154,8 +167,7 @@ p12 <- plotEdgeProbs(edges[distance_cat == 4, ], regions = "Southeast")
 legend <- g_legend(p13)
 blank <- rectGrob(gp = gpar(col = "white"))
 
-
-pdf(file = "results/windrose_plots.pdf", width = 6.5, height = 8)
+#pdf(file = "results/windrose_plots.pdf", width = 6.5, height = 8)
 grid.arrange(arrangeGrob(p13+theme(legend.position = "none"),
                          p16+theme(legend.position = "none"),
                          p1,p4,p7,p10, ncol = 1, 
@@ -172,6 +184,57 @@ grid.arrange(arrangeGrob(p13+theme(legend.position = "none"),
              layout_matrix = rbind(c(1,2,3),c(4,4,4)),
              heights = c(0.95,0.05),
              ncol = 3)
-dev.off()
+#dev.off()
+
+
+#Power plant center
+
+#Monitor Center
+
+p13 <- plotPairCounts(edges[distance < 1000, ], regions = "IndustrialMidwest", center = "powerplants")
+p14 <- plotPairCounts(edges[distance < 1000, ], regions = "Northeast", center = "powerplants")
+p15 <- plotPairCounts(edges[distance < 1000, ], regions = "Southeast", center = "powerplants")
+p16 <- plotPairCounts(edges[edge == 1, ], regions = "IndustrialMidwest", center = "powerplants")
+p17 <- plotPairCounts(edges[edge == 1, ], regions = "Northeast", center = "powerplants")
+p18 <- plotPairCounts(edges[edge == 1, ], regions = "Southeast", center = "powerplants")
+p1 <- plotEdgeProbs(edges[distance_cat == 1, ], regions = "IndustrialMidwest", center = "powerplants")
+p2 <- plotEdgeProbs(edges[distance_cat == 1, ], regions = "Northeast", center = "powerplants")
+p3 <- plotEdgeProbs(edges[distance_cat == 1, ], regions = "Southeast", center = "powerplants")
+p4 <- plotEdgeProbs(edges[distance_cat == 2, ], regions = "IndustrialMidwest", center = "powerplants")
+p5 <- plotEdgeProbs(edges[distance_cat == 2, ], regions = "Northeast", center = "powerplants")
+p6 <- plotEdgeProbs(edges[distance_cat == 2, ], regions = "Southeast", center = "powerplants")
+p7 <- plotEdgeProbs(edges[distance_cat == 3, ], regions = "IndustrialMidwest", center = "powerplants")
+p8 <- plotEdgeProbs(edges[distance_cat == 3, ], regions = "Northeast", center = "powerplants")
+p9 <- plotEdgeProbs(edges[distance_cat == 3, ], regions = "Southeast", center = "powerplants")
+p10 <- plotEdgeProbs(edges[distance_cat == 4, ], regions = "IndustrialMidwest", center = "powerplants")
+p11 <- plotEdgeProbs(edges[distance_cat == 4, ], regions = "Northeast", center = "powerplants")
+p12 <- plotEdgeProbs(edges[distance_cat == 4, ], regions = "Southeast", center = "powerplants")
+legend <- g_legend(p13)
+blank <- rectGrob(gp = gpar(col = "white"))
+
+#pdf(file = "results/windrose_plots_powerplant_center.pdf", width = 6.5, height = 8)
+grid.arrange(arrangeGrob(p13+theme(legend.position = "none"),
+                         p16+theme(legend.position = "none"),
+                         p1,p4,p7,p10, ncol = 1, 
+                         top = textGrob("IndustrialMidwest",gp = gpar(fontsize = 12))), 
+             arrangeGrob(p14+theme(legend.position = "none"),
+                         p17+theme(legend.position = "none"),
+                         p2,p5,p8,p11, ncol = 1,
+                         top = textGrob("Northeast", gp = gpar(fontsize = 12))), 
+             arrangeGrob(p15+theme(legend.position = "none"),
+                         p18+theme(legend.position = "none"),
+                         p3,p6,p9,p12, ncol = 1,
+                         top = textGrob("Southeast", gp = gpar(fontsize = 12))),
+             legend,
+             layout_matrix = rbind(c(1,2,3),c(4,4,4)),
+             heights = c(0.95,0.05),
+             ncol = 3)
+#dev.off()
+
+
+
+
+
+
 
 
