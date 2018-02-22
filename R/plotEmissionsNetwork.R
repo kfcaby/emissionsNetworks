@@ -46,7 +46,7 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
     setkey(edges, Monitor)
     #determine how to plot cases when no PM was observed
     pch.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),4,21)
-    cex.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),0,3)
+    cex.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),0,1)
   } else{
     setkey(edges, Monitor)
     rbPal <- colorRampPalette(c('white','black'))
@@ -77,11 +77,11 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
       col.monitor <- bg.monitor
       pch.monitor <- ifelse(is.na(exposure), 4, 21)
       #plot NAs really small
-      cex.monitor <- ifelse(is.na(exposure), 0, 3)
+      cex.monitor <- ifelse(is.na(exposure), 0, 1)
       if(exposure.var %in% c("num_edges","gams.coeff")){
         setkey(edges, Monitor)
         pch.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),4,21)
-        cex.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),0,3)
+        cex.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),0,1)
       }
       
     }
@@ -93,11 +93,11 @@ plotEmissionsNetwork <- function(edges, exposure.type = NA, exposure.var = "avgP
       bg.monitor <- ifelse(High == 1 | is.na(High), binary.colors[1], binary.colors[2])
       col.monitor <- bg.monitor
       pch.monitor <- ifelse(is.na(High), 4, 21)
-      cex.monitor <- ifelse(is.na(exposure), 0, 3)
+      cex.monitor <- ifelse(is.na(exposure), 0, 1)
       if(exposure.var %in% c("num_edges","gams.coeff")){
         setkey(edges, Monitor)
         pch.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),4,21)
-        cex.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),0,3)
+        cex.monitor <- ifelse(is.na(edges[J(unique(Monitor)), "avgPM", mult = "first"]),0,1)
       }
       
     }
