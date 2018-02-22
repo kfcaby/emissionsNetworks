@@ -7,6 +7,9 @@ library(directlabels)
 library(viridis)
 library(extrafont)
 
+
+
+
 g_legend<-function(a.gplot){
   tmp <- ggplot_gtable(ggplot_build(a.gplot))
   leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
@@ -35,106 +38,205 @@ edges[ , distance_cat := ifelse(distance <= 250, 1,
 
 edges[ , powerplant_cat := ifelse(avgemissions >= quantile(avgemissions, 0.80),2,1 )]
 edges[ , PP.type := ifelse(emissions.ZeroDays > 90, "seasonal", "all.year")]
+edges[ , edge.neg := ifelse(gams.coeff < 0 & p.value_adj < 0.05,1,0)]
+
+edges <- edges[receptor.2005NAs < 365, ]
+
 ## ------------------------------------------------------------------------------------ ##
 ##   Table for Monitor/Power Plant Summary                                              ##
 ## ------------------------------------------------------------------------------------ ##
 
 #Monitors
-monitors <- edges[ , list(Monitor = unique(Monitor), avgPM = unique(avgPM), 
+monitors <- edges[ , list(NAdays = unique(receptor.2005NAs),
+                          avgPM = unique(avgPM), 
                           sdPM = unique(sdPM), linkedPP = sum(edge, na.rm = TRUE),
+                          linkedPP.neg = sum(edge.neg, na.rm = TRUE),
                           receptor.region = unique(receptor.region),
-                          monitor.freq = unique(monitor.freq)),
+                          monitor.freq = unique(monitor.freq),
+                          receptor.latitude = unique(receptor.latitude),
+                          receptor.longitude = unique(receptor.longitude)),
                   by = "Monitor"]
-monitor_summary_temp <- monitors[ , list(n = round(length(Monitor),0),
-                                    avgPM = round(mean(avgPM, na.rm = TRUE),1),
-                                    sdPM = round(mean(sdPM, na.rm = TRUE),1),
-                                    linkedPP = median(linkedPP, na.rm = TRUE)),
-                            by = "receptor.region"]
-step1 <- melt(monitor_summary_temp, id.vars = "receptor.region")
-monitor_summary <- dcast(step1, variable ~ receptor.region, value.var = "value")
+monitors[ , degree.zero := ifelse(linkedPP == 0, 1, 0)]
 
-
-monitor_freq_summary <- monitors[ , list(hasPP_perc = sum(linkedPP > 0)/length(linkedPP),
-                 median_linkedPP = median(linkedPP), n = length(Monitor))
-         , by = c( "monitor.freq")]
-setkey(monitor_freq_summary,  monitor.freq)
-monitor_freq_summary
-
-par(mfrow = c(1,2))
-hist(monitors[monitor.freq == "daily",]$linkedPP, xlim = c(0,100))
-hist(monitors[monitor.freq != "daily",]$linkedPP, xlim = c(0,100))
-par(mfrow = c(1,1))
 #Power plants
-powerplants <- edges[PP.region %in% c("IndustrialMidwest","Northeast","Southeast"),
+powerplants <- edges[ ,
                      list(avgemissions = unique(avgemissions),
                           sdemissions = unique(sdemissions), emissions.NAdays = unique(emissions.NAdays),
                           PP.region = unique(PP.region), PP.state = unique(PP.state),
                           PP.latitude = unique(PP.latitude), PP.longitude = unique(PP.longitude),
                           linkedMonitors = sum(edge,na.rm = TRUE),
                           linkedMonitorsPerc = sum(edge,na.rm = TRUE)/sum(edge ==1 | edge == 0, na.rm = TRUE),
+                          linkedMonitors.neg = sum(edge.neg,na.rm = TRUE),
                           powerplant_cat = unique(powerplant_cat),
                           emissions.ZeroDays = unique(emissions.ZeroDays)),
                      by = "PP"]
 powerplants[ , type := ifelse(emissions.ZeroDays > 90, "seasonal", "all.year")]
-powerplants[ , link.cat := ifelse(linkedMonitorsPerc == 0, "none", ifelse(linkedMonitorsPerc > 0.3, "high", "normal"))]
-powerplant_summary_temp <- powerplants[ , list(m = round(length(PP), 0),
-                                          avgemissions = round(mean(avgemissions, na.rm = TRUE), 1),
-                                          sdemissions = round(mean(sdemissions, na.rm = TRUE),1),
-                                          missing.days = round(median(emissions.NAdays, na.rm = TRUE),1),
-                                          linkedMonitors = round(median(linkedMonitors, na.rm = TRUE),0)),
-                                  by = "PP.region"]
-step1 <- melt(powerplant_summary_temp, id.vars = "PP.region")
-powerplant_summary <- dcast(step1, variable ~ PP.region, value.var = "value") 
-
-
-summary <- rbind(monitor_summary, powerplant_summary)
-summary$variable <- c("number of monitors", "average daily PM2.5 per monitor", "average stdev in daily PM2.5",
-                      "median number of linked power plants", "number of power plants", "average daily SO2 emissions",
-                      "average stdev in daily emissions", "median number of missing days", "median number of linked monitors")
-
-summary <- xtable(summary, digits = 1, align = c("l","l","l","l", "l"))
-#sink(file = "results/tableone.tex")
-#print(summary, include.rownames = FALSE, hline.after = c(-1,0,4, nrow(summary)))
-#sink()
+powerplants[ , link.cat := ifelse(linkedMonitorsPerc == 0, "none", ifelse(linkedMonitorsPerc > 0.75, "high", "normal"))]
+powerplants[ , link.cat := factor(link.cat, levels = c("none","normal","high"))]
+powerplants[ , degree.zero := ifelse(linkedMonitors == 0, 1, 0)]
 
 ## ------------------------------------------------------------------------------------ ##
-##   Old plot Cory doesn't like                                                         ##
+##   summary table                                                                      ##
 ## ------------------------------------------------------------------------------------ ##
 
-#edge summary by power plant and receptor region
-edge_summary <- melt(dcast(edges[!is.na(edge) & PP.region %in% c("IndustrialMidwest","Northeast","Southeast") ,], 
-      PP.region + distance_cat ~ receptor.region, 
-      fun = function(x) round(sum(edge)/length(edge),2),
-      value.var = "edge"),id.vars = c("PP.region","distance_cat"), 
-     variable.name = "receptor.region", value.name = "edge.percent")
+pp1 <- powerplants[ , list(n = .N,
+                           avgemissions = round(mean(avgemissions, na.rm = TRUE),2),
+                           avgsdemissions = round(mean(sdemissions, na.rm = TRUE),2),
+                           linkedMonitors = median(linkedMonitors, na.rm = TRUE),
+                           unlinked = sum(linkedMonitors == 0, na.rm = TRUE)),
+                    by = "PP.region"]
+pp2 <- melt(pp1, id.vars = "PP.region")
+xtable(dcast(pp2, variable ~ PP.region, value.var = "value"))
+
+m1 <- monitors[ , list(n = .N,
+                       avgPM = round(mean(avgPM, na.rm = TRUE),2),
+                       avgsdPM = round(mean(sdPM, na.rm = TRUE),2),
+                       linkedPP = median(linkedPP, na.rm = TRUE),
+                       unlinked = sum(linkedPP == 0, na.rm = TRUE)),
+                by = "receptor.region"]
+m2 <- melt(m1, id.vars = "receptor.region")
+xtable(dcast(m2, variable ~ receptor.region, value.var = "value"))
+
+## ------------------------------------------------------------------------------------ ##
+##   why do some power plants not connect to anything                                   ##
+## ------------------------------------------------------------------------------------ ##
+
+txt.size = 10
+theme2 <- theme(axis.title.x = element_blank(),
+                legend.position = "none",
+                axis.title = element_text(size = txt.size),
+                axis.text = element_text(size = txt.size),
+                legend.text = element_text(size = txt.size),
+                legend.title = element_text(size = txt.size),
+                plot.title = element_text(size = txt.size + 2, hjust = 0.5))
+theme1 <- theme(axis.title.x = element_blank(),
+                legend.position = "bottom",
+                axis.title = element_text(size = txt.size),
+                axis.text = element_text(size = txt.size),
+                legend.text = element_text(size = txt.size),
+                legend.title = element_text(size = txt.size),
+                legend.key.size = unit(6, "line"),
+                plot.title = element_text(size = txt.size + 2, hjust = 0.5)) 
+
+pt.size <- 10
+
+#pdf("monitor_networks/plots/emissions_analysis.pdf", height = 9, width = 22)
+
+g_legend<-function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)}
+
+# num.PP <- ggplot(powerplants, aes(x = PP.region, y = n.powerplants, color = as.factor(link.cat))) +
+#   labs(title = "Number of powerplants", y = "Powerplants" ) + geom_point(size = pt.size, shape = 17) + theme_bw() + 
+#   scale_color_manual(values = c(viridis(2)[2],viridis(2)[1]),name = "Powerplants: ",
+#                      labels = c("without edges","with edges"))+ ylim(0,125)+theme2
+
+PP.summary <- powerplants[ , list(powerplants = .N), by = c("PP.region","link.cat")]
+setkey(PP.summary, PP.region, link.cat)
+
+p1 <- ggplot(powerplants.subset, aes(x = PP.region, y = linkedMonitorsPerc)) +
+  labs(title = "", y = "percent of monitors linked") + geom_boxplot(alpha = 0.7) + theme_bw() +theme1
+
+p2 <- ggplot(powerplants.subset, aes(x = PP.region, y = avgemissions, fill = link.cat)) +
+  labs(title = "Average daily emissions", y = "SO2") +  geom_boxplot(alpha = 0.7) + theme_bw() + 
+  scale_fill_viridis(discrete = TRUE, direction = -1) + theme2
+
+p3 <- ggplot(powerplants.subset, aes(x = PP.region, y = sdemissions,  fill = link.cat)) +
+  labs(title = "Standard deviation in daily emissions", y = "SO2") +  geom_boxplot(alpha = 0.7) + theme_bw() + 
+  scale_fill_viridis(discrete = TRUE, direction = -1) + theme2
+
+p4 <- ggplot(powerplants.subset, aes(x = PP.region, y = emissions.ZeroDays, fill = link.cat)) +
+  labs(title = "Number of days with missing emissions data", y = "number of days") +
+  geom_boxplot(alpha = 0.7) + theme_bw() + 
+  scale_fill_viridis(discrete = TRUE, direction = -1, option = "magma") + theme2
+
+p5 <- ggplot(powerplants.subset, aes(x = PP.region, y = emissions.ZeroDays, fill = as.factor(powerplant_cat))) +
+  labs(title = "", y = "number of days") +
+  geom_boxplot(alpha = 0.7) + theme_bw() + 
+  scale_fill_viridis(discrete = TRUE, direction = -1) + theme2
 
 
-edge_summary$direction <- paste(region_abbr(edge_summary$PP.region),"-",
-                                region_abbr(edge_summary$receptor.region),
-                                sep = "")
-edge_summary$distance_label <- dist_labels(edge_summary$distance_cat)
-
-# Edge percents by orientation and distance plot for paper
-#Plot Cory doesn't like
-#pdf(file = "Other Plots/edges_by_dist.pdf", width = 5.5, height = 4)
-ggplot(edge_summary, aes(x = distance_label, y = edge.percent, color = PP.region)) + 
-  geom_line(aes(group = direction)) +
-  geom_dl(aes(label = direction),  method = list("last.points", cex = 0.5)) +
-  scale_color_viridis(discrete = TRUE, name = "Power plant region") +
-  theme_bw() +
-  theme(
-      text = element_text(size = 12),
-      legend.position = "bottom"
-    ) + ylim(0,0.5) +
-  labs(x = "Distance from power plant to monitor", y = "Percent of power plant/monitor pairs")
+#pdf(file = "results/zero_emissions.pdf", height = 3, width = 6.5)
+p6 <- ggplot(powerplants.subset, aes(x = PP.region, y = emissions.ZeroDays, fill = link.cat)) +
+  labs(title = "", y = "number of\nzero emissions days") +
+  theme(axis.title.x = element_blank()) +
+  geom_boxplot(alpha = 0.7) + 
+  scale_fill_viridis(discrete = TRUE, direction = -1, 
+                     option = "magma", name = "Connectivity\nCategory")
 #dev.off()
+                     
+mylegend<-g_legend(p1)
+
+blank <- rectGrob(gp = gpar(col = "white"))
+
+
+grid.arrange(p1,p2,p3, ncol = 3)
+
+p2
+
+grid.arrange(num.PP, p1 + theme(legend.position = "none"),p2,mylegend, blank, ncol = 3,
+             top = textGrob("Why do some power plants have linked monitors and others do not?",
+                            gp = gpar(fontsize = 30)),
+             layout_matrix = rbind(c(5,5,5),c(1,2,3),c(4,4,4)),
+             heights = c(0.05,0.75, 0.20))
+
+grid.arrange(p3,p4,p5,mylegend, blank, ncol = 3,
+             top = textGrob("Why do some power plants have linked monitors and others do not?",
+                            gp = gpar(fontsize = 30)),
+             layout_matrix = rbind(c(5,5,5),c(1,2,3),c(4,4,4)),
+             heights = c(0.05,0.75, 0.20))
+
+
+
+
+## ------------------------------------------------------------------------------------ ##
+##   remove pairs from hyper connectors and zero connectors                             ##
+## ------------------------------------------------------------------------------------ ##
+monitors.subset <- monitors[linkedPP > 0, ]
+powerplants.subset <- powerplants
+
+edges <- edges[Monitor %in% monitors.subset$Monitor & PP %in% powerplants.subset$PP, ]
+
+
+
+#recalculate power plant and monitor stats
+#Monitors
+monitors.subset <- edges[ , list(Monitor = unique(Monitor), 
+                          avgPM = unique(avgPM), 
+                          sdPM = unique(sdPM), 
+                          linkedPP = sum(edge, na.rm = TRUE),
+                          linkedPP.neg = sum(edge.neg, na.rm = TRUE),
+                          exposure = sum(avgemissions*(1/distance)*edge, na.rm = TRUE),
+                          exposure_inmap = sum(inmapPM, na.rm = TRUE),
+                          receptor.region = unique(receptor.region),
+                          receptor.state = unique(receptor.state),
+                          monitor.freq = unique(monitor.freq),
+                          receptor.latitude = unique(receptor.latitude),
+                          receptor.longitude = unique(receptor.longitude)),
+                   by = "Monitor"]
+
+
+#Power plants
+powerplants.subset <- edges[ PP.region %in% c("IndustrialMidwest", "Northeast", "Southeast"),
+                      list(avgemissions = unique(avgemissions),
+                           sdemissions = unique(sdemissions), emissions.NAdays = unique(emissions.NAdays),
+                           PP.region = unique(PP.region), PP.state = unique(PP.state),
+                           PP.latitude = unique(PP.latitude), PP.longitude = unique(PP.longitude),
+                           linkedMonitors = sum(edge,na.rm = TRUE),
+                           linkedMonitorsPerc = sum(edge,na.rm = TRUE)/sum(edge ==1 | edge == 0, na.rm = TRUE),
+                           linkedMonitors.neg = sum(edge.neg,na.rm = TRUE),
+                           powerplant_cat = unique(powerplant_cat),
+                           emissions.ZeroDays = unique(emissions.ZeroDays)),
+                      by = "PP"]
 
 ## ------------------------------------------------------------------------------------ ##
 ##   Blank Map                                                                          ##
 ## ------------------------------------------------------------------------------------ ##
 
 #blank map for paper
-pdf(file = "results/blankmap.pdf", height = 4)
+#pdf(file = "results/blankmap.pdf", height = 4)
 par(mar = c(0,0,0,0))
 US <- map("state",fill=FALSE, plot=FALSE)
 US.names <- US$names
@@ -153,13 +255,9 @@ col.region[US.IDs %in% Southeast] <- viridis(4, alpha = 0.5)[3]
 map("state", fill = TRUE, col = col.region, plot = TRUE)
 #US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
 #plot(US_poly_sp)
-setkey(edges, Monitor)
-points(edges[J(unique(Monitor)), c("receptor.longitude","receptor.latitude"), mult = "first"],
-       pch = 21, bg = "black")
-setkey(edges,PP)
-emissions <- edges[J(unique(PP)), "avgemissions", mult = "first"]$avgemissions
-pp.cex <- ifelse(emissions < quantile(emissions, 0.8), 0.6, 1.25)
-points(edges[J(unique(PP)), c("PP.longitude","PP.latitude"), mult = "first"],
+points(monitors$receptor.longitude, monitors$receptor.latitude, pch = 21, bg = "black")
+pp.cex <- ifelse(powerplants$powerplant_cat == 1, 0.6, 1.25)
+points(powerplants$PP.longitude, powerplants$PP.latitude,
        pch = 24, bg = viridis(2)[2], col = "black", lwd = 1, cex = pp.cex)
 legend(x = -79, y = 33.5, 
        legend = c("coal power\nplant","AQS monitor"),
@@ -167,63 +265,82 @@ legend(x = -79, y = 33.5,
        pt.cex = c(1.25,1),
        pt.bg = c(viridis(2)[2],"black"),
        cex = 1, bty = "n")
+#dev.off()
+
+## ------------------------------------------------------------------------------------ ##
+##   edge percents                                                                      ##
+## ------------------------------------------------------------------------------------ ##
+
+edge.perc <- edges[ , list(edgePerc = sum(edge, na.rm = TRUE)/sum(!is.na(edge)),
+                           edgePerc.neg = sum(edge.neg, na.rm = TRUE)/sum(!is.na(edge.neg))), by = "distance_cat"]
+setkey(edge.perc, distance_cat)
+edge.perc
+
+nrow(edges[!is.na(edge),])
+nrow(edges[edge == 1,])
+
+nrow(edges[edge == 1,])/nrow(edges[!is.na(edge),])
+nrow(edges[edge.neg == 1,])/nrow(edges[!is.na(edge),])
+
+## ------------------------------------------------------------------------------------ ##
+##   Degree Histograms                                                                  ##
+## ------------------------------------------------------------------------------------ ##
+
+pdf(file = "results/monitor_degree.pdf", height = 3, width = 3)
+hist(monitors$linkedPP, main = NA, xlab = NA, breaks = 50, cex = 0.75, ylab = "power plants (#)")
 dev.off()
+
+pdf(file = "results/powerplant_degree.pdf", height = 3, width = 3)
+hist(powerplants$linkedMonitors, main = NA, xlab = NA, breaks = 50, cex = 0.75, ylab = "monitors (#)")
+dev.off()
+
+median(monitors.subset$linkedPP)
+sum(monitors.subset$linkedPP == 0)
+nrow(monitors.subset)
+sum(monitors.subset$linkedPP == 0)/nrow(monitors.subset)
+
+median(powerplants.subset$linkedMonitors)
+sum(powerplants.subset$linkedMonitors == 0)
+nrow(powerplants.subset)
+sum(powerplants.subset$linkedMonitors == 0)/nrow(powerplants.subset)
+
+## ------------------------------------------------------------------------------------ ##
+##   degree zero                                                                       ##
+## ------------------------------------------------------------------------------------ ##
+
+powerplants[ , list(emissions.ZeroDays = median(emissions.ZeroDays)), by = "degree.zero"]
+
+monitors[degree.zero == 1, list(365 - NAdays)]
 
 ## ------------------------------------------------------------------------------------ ##
 ##   side-by-side maps for monitor exposure                                             ##
 ## ------------------------------------------------------------------------------------ ##
-#pdf(file = "results/exposure_map.pdf", height = 4)
+pdf(file = "results/exposure_map.pdf", height = 4)
 map("state", fill = FALSE, plot = TRUE)
-setkey(edges, Monitor)
-monitors <- edges[ , list(longitude = unique(receptor.longitude),
-                          latitude = unique(receptor.latitude),
-                          receptor.state = unique(receptor.state),
-                          receptor.region = unique(receptor.region),
-                          exposure = sum(avgemissions*(1/distance)*edge, na.rm = TRUE),
-                          exposure_inmap = sum(inmapPM, na.rm = TRUE)),
-                   by = "Monitor"]
-#partition into 4 colors
-bg.monitor <- rep(NA, nrow(monitors))
-#bg.monitor[monitors$exposure > 0] <- as.numeric(cut(ecdf(monitors[exposure > 0,]$exposure)(monitors[exposure > 0,]$exposure), 
-#                  breaks = c(0 ,0.25, 0.5, 0.75, 1)))
-bg.monitor[monitors$exposure > 0] <- rank(monitors[exposure > 0,]$exposure)
-bg.monitor[monitors$exposure > 0] <- rev(plasma(nrow(monitors[exposure > 0,])))[bg.monitor[monitors$exposure > 0]]
-points(monitors[ , .(longitude,latitude)] ,pch = 21, bg = bg.monitor, cex = 1.25)
-#dev.off()
-
-#legend
-#pdf(file = "results/exposure_legend.pdf", height = 4)
-plot(0,0)
-legend(x = 0.5, y = 0.5, title = "Exposure\nQuartile", title.adj = 0,
-       legend = c("1st", "2nd", "3rd", "4th"),
-       pch = 21,
-       pt.cex = 2,
-       pt.bg = rev(plasma(4)),
-       cex = 1, bty = "n")
-#dev.off()
+bg.monitor <- rep(NA, nrow(monitors.subset))
+bg.monitor[monitors.subset$exposure > 0] <- rank(monitors.subset[exposure > 0,]$exposure)
+bg.monitor[monitors.subset$exposure > 0] <- rev(plasma(nrow(monitors.subset[exposure > 0,])))[bg.monitor[monitors.subset$exposure > 0]]
+points(monitors.subset[ , .(receptor.longitude,receptor.latitude)] ,pch = 21, bg = bg.monitor, cex = 1.25)
+dev.off()
 
 
-#pdf(file = "results/inmap_map.pdf", height = 4)
+pdf(file = "results/inmap_map.pdf", height = 4)
 map("state", fill = FALSE, plot = TRUE)
-bg.monitor.inmap <- rep(NA, nrow(monitors))
-# bg.monitor[monitors$exposure_inmap > 0] <- as.numeric(cut(ecdf(monitors[exposure_inmap > 0,]$exposure_inmap)(monitors[exposure_inmap > 0,]$exposure_inmap), 
-#                                                     breaks = c(0 ,0.25, 0.5, 0.75, 1)))
-# bg.monitor[monitors$exposure_inmap > 0] <- rev(plasma(4))[bg.monitor[monitors$exposure_inmap > 0]]
+bg.monitor.inmap <- rep(NA, nrow(monitors.subset))
+bg.monitor.inmap[monitors.subset$exposure_inmap > 0] <- rank(monitors.subset[exposure_inmap > 0,]$exposure_inmap)
+bg.monitor.inmap[monitors.subset$exposure_inmap > 0] <- rev(plasma(nrow(monitors.subset[exposure_inmap > 0,])))[bg.monitor.inmap[monitors.subset$exposure_inmap > 0]]
+points(monitors.subset[ , .(receptor.longitude,receptor.latitude)] ,pch = 21, bg = bg.monitor.inmap, cex = 1.25)
+dev.off()
 
-bg.monitor.inmap[monitors$exposure_inmap > 0] <- rank(monitors[exposure_inmap > 0,]$exposure_inmap)
-bg.monitor.inmap[monitors$exposure_inmap > 0] <- rev(plasma(nrow(monitors[exposure_inmap > 0,])))[bg.monitor.inmap[monitors$exposure_inmap > 0]]
-points(monitors[ , .(longitude,latitude)] ,pch = 21, bg = bg.monitor.inmap, cex = 1.25)
-#dev.off()
-
-hist(monitors$exposure, breaks = 50)
-hist(monitors$exposure_inmap, breaks = 50)
+hist(monitors.subset$exposure, breaks = 50)
+hist(monitors.subset$exposure_inmap, breaks = 50)
 
 
 ## ------------------------------------------------------------------------------------ ##
 ##   rank comparisons for monitor exposure                                             ##
 ## ------------------------------------------------------------------------------------ ##
 rankComp <- function(monitors, regions){
-  data <- monitors[(receptor.region %in% regions) & (exposure > 0), ]
+  data <- monitors[(receptor.region %in% regions) & (exposure > 0) & (exposure_inmap > 0), ]
   
   data[ , receptor.subregion := receptor.state]
   data[ , receptor.subregion := ifelse(receptor.state %in% c("RI","CT","MA","ME","VT","NH"),
@@ -244,7 +361,7 @@ rankComp <- function(monitors, regions){
                                                       "AR","NC","TN")))
   print(data$receptor.subregion)
   txt.size = 10
-  plot <- ggplot(data, aes(x = exposure_rank, y = inmap_rank, color = receptor.subregion)) + geom_point() + 
+  plot <- ggplot(data, aes(x = exposure_rank, y = inmap_rank, color = receptor.subregion)) + geom_point(size = 4) + 
     scale_color_viridis(discrete = TRUE, begin = 0, end = 1, name = "state") +
     theme(legend.position = "right",
           axis.title = element_text(size = txt.size),
@@ -262,24 +379,24 @@ rankComp <- function(monitors, regions){
   return(plot)
 }
 
-p1 <- rankComp(monitors, regions = "IndustrialMidwest")
-pdf(file = "results/comparisonIMW.pdf", height = 2.5, width = 3.1)
+p1 <- rankComp(monitors.subset, regions = "IndustrialMidwest")
+#pdf(file = "results/comparisonIMW.pdf", height = 3, width = 4)
 p1
 dev.off()
 
 #without Michigan and Ohio
-rankComp(monitors[!(receptor.state %in% c("MI","OH"))  ,], regions = "IndustrialMidwest")
+rankComp(monitors.subset[!(receptor.state %in% c("MI","OH"))  ,], regions = "IndustrialMidwest")
 
-p2 <- rankComp(monitors, regions = "Northeast")
-pdf(file = "results/comparisonNE.pdf", height = 2.5, width = 3.35)
+p2 <- rankComp(monitors.subset, regions = "Northeast")
+#pdf(file = "results/comparisonNE.pdf", height = 3, width = 4)
 p2
 dev.off()
 
 #excluding western Penn.
-rankComp(monitors[!(receptor.state %in% c("PA") & longitude < -77.7),], regions = "Northeast")
+rankComp(monitors.subset[!(receptor.state %in% c("PA") & receptor.longitude < -77.7),], regions = "Northeast")
 
-p3 <- rankComp(monitors, regions = "Southeast")
-pdf(file = "results/comparisonSE.pdf", height = 2.5, width = 3.65)
+p3 <- rankComp(monitors.subset, regions = "Southeast")
+#pdf(file = "results/comparisonSE.pdf", height = 3, width = 4)
 p3
 dev.off()
 
@@ -328,11 +445,10 @@ plotROC <- function(edges, p = seq(0.02,0.98,0.02), title = ""){
   p1 <- ggplot(rates, aes(x = FPR, y = TPR, color = InMAP.cutoff)) + geom_point() +
     theme_bw() + geom_abline(slope = 1, intercept = 0) + scale_color_viridis(direction = -1) +
     theme(legend.position = "none", 
-#          axis.text = element_blank(),
-#          axis.title = element_blank(),
-           legend.direction = "horizontal"
-          ) + 
-    labs(title = title)
+          axis.text = element_blank(),
+          axis.title = element_blank(),
+          legend.direction = "horizontal"
+          )
   return(p1)
 }
 
@@ -375,17 +491,6 @@ getROC_variation <- function(edges, p){
   return(rates)
 }
 
-PP.high <- powerplants[link.cat == "high",]$PP
-PP.normal <- powerplants[link.cat == "normal",]$PP
-PP.none <- powerplants[link.cat == "none"]$PP
-PP.seasonal <- powerplants[type == "seasonal"]$PP
-PP.allyear <- powerplants[type == "all.year"]$PP
-
-PP.IMW <- powerplants[PP.region == "IndustrialMidwest",]
-PP.NE <- powerplants[PP.region == "Northeast",]
-PP.SE <- powerplants[PP.region == "Southeast",]
-
-plotROC(edges[PP.IMW], p)
 
 regions <- c("IndustrialMidwest", "Northeast", "Southeast")
 powerplant_cat <- c(1,2)
@@ -396,20 +501,22 @@ cases <- data.table(cases)
 names(cases) <- c("PP.region", "powerplant_cat", "PP.type")
 setkey(cases, PP.region, powerplant_cat, PP.type)
 
+p = seq(0.02,0.98,0.02)
+
 plots <- as.list(rep(0,12))
 for(i in 1:nrow(cases)){
   plots[[i]] <- plotROC(edges[PP.region == cases[i,]$PP.region & powerplant_cat == cases[i,]$powerplant_cat & PP.type == cases[i,]$PP.type,
                               ], p)
 }
 
-# for(i in 1:12){
-#   pdf(file = paste("results/roc",i,".pdf", sep = ""), height = 0.75, width = 0.75)
-#   print(plots[[i]])
-#   dev.off()
-# }
+for(i in 1:12){
+  pdf(file = paste("results/roc",i,".pdf", sep = ""), height = 0.75, width = 0.75)
+  print(plots[[i]])
+  dev.off()
+}
 
 pdf(file = "results/roc_all.pdf", height = 3, width = 2.5)
-plotROC(edges, title = "All regions")
+plotROC(edges[receptor.region %in% c("IndustrialMidwest", "Northeast", "Southeast"),], title = "All regions")
 dev.off()
 
 pdf(file = "results/roc_byPPregion.pdf", height = 3, width = 6.5)
@@ -451,32 +558,78 @@ dev.off()
 
 
 ## ------------------------------------------------------------------------------------ ##
-##  Other network and InMAP comparisons                                                 ##
+##   Prob curve for edges and InMAP PM                                                   ##
+## ------------------------------------------------------------------------------------ ##
+#Compares edge probability for InMAP vs non-InMAP edges
+getProbs <- function(edges, p = seq(0.02,0.98,0.02)){
+  #function return false positive rate and true positive rate for different cutoffs
+  probs <- Vectorize(function(edges, p){
+    complete_edges <- edges[!is.na(edge) & !is.na(inmapPM),]
+    
+    
+    complete_edges[ , edge.inmap := ifelse(complete_edges$inmapPM >= quantile(complete_edges$inmapPM,p),1,0)]
+    
+    
+    percIn <- complete_edges[edge.inmap == 1, sum(edge)/length(edge) ]
+    percOut <- complete_edges[edge.inmap == 0, sum(edge)/length(edge) ]
+    
+    
+    return(c(percIn,percOut))
+  }, vectorize.args = "p")
+  
+  rates <- probs(edges,p)
+  #format output
+  rates <- data.frame(`InMAP cutoff` = p,percIn = rates[1 ,], percOut = rates[2, ])
+  return(rates)
+}
+plotProbs <- function(edges, p = seq(0.02,0.98,0.02), title = "", return.probs = FALSE){
+  require(viridis)
+  rates <- getProbs(edges, p)
+  p1 <- ggplot(rates, aes(x = percIn, y = percOut, color = InMAP.cutoff)) + geom_point() +
+    theme_bw() + geom_abline(slope = 1, intercept = 0) + scale_color_viridis(direction = -1) +
+    theme(legend.position = "bottom", 
+          #          axis.text = element_blank(),
+          #          axis.title = element_blank(),
+          legend.direction = "horizontal"
+    ) + labs(title = title) + ylim(0,1) + xlim(0,1)
+  ifelse(return.probs == TRUE, return(rates), return(p1))
+}
+#only do analysis for powerplants and monitors with sufficient linkages
+
+
+probsIMW <-plotProbs(edges[PP.region == "IndustrialMidwest", ],
+          return.probs = TRUE) 
+probsIMW$PP.region <- "IndustrialMidwest"
+probsNE <- plotProbs(edges[PP.region == "Northeast", ],
+                     return.probs = TRUE)
+probsNE$PP.region <- "Northeast"
+probsSE <- plotProbs(edges[PP.region == "Southeast", ],
+                     return.probs = TRUE)
+probsSE$PP.region <- "Southeast"
+probs <- rbind(probsIMW,probsNE, probsSE)
+
+#pdf(file = "results/probPlots.pdf", height = 4)
+ggplot(probs, aes(x = percIn, y = percOut, color = InMAP.cutoff, group = PP.region, shape = PP.region)) + geom_point() +
+  theme_bw() + geom_abline(slope = 1, intercept = 0) + scale_color_viridis(direction = -1) +
+  theme(
+        #          axis.text = element_blank(),
+        #          axis.title = element_blank(),
+        
+  ) + labs(title = "", x = "Edge % - InMAP edges", y = "Edge % - InMAP non-edges") + ylim(0,0.5) + xlim(0,0.5) +
+  guides(shape=guide_legend(title="power plant region"))
+#dev.off()
+
+
+
+## ------------------------------------------------------------------------------------ ##
+##  InMAP table from paper                                                              ##
 ## ------------------------------------------------------------------------------------ ##
 
-zero_sum <- powerplants[ , list(median.ZeroDays = median(emissions.ZeroDays)), by = c("PP.region","powerplant_cat")]
-setkey(zero_sum, PP.region)
-zero_sum
-
-type_summary <- powerplants[ , list(n = length(PP), 
-                                    largePerc = signif(sum(powerplant_cat==2)/length(PP),2),
-                                    median.linked.perc = median(linkedMonitorsPerc)),
-                                    by = c("PP.region", "type")]
-setkey(type_summary, PP.region)
-type_summary
-
-link_summary <- powerplants[ , list(n = length(PP),
-                                    largePerc = signif(sum(powerplant_cat==2)/length(PP),2),
-                                    seasonalPerc = signif(sum(type == "seasonal")/length(PP),2)),
-                             by = c("link.cat")]
-setkey(link_summary,link.cat)
-link_summary
 
 #InMAP table from paper
 
 InMAPsummary <- edges[!is.na(edge) & PP.region %in% c("IndustrialMidwest", "Northeast", "Southeast"), 
                       list(medianInMAP = signif(median(inmapPM, na.rm = TRUE)*1000,2),
-                           meandist = signif(mean(distance),2),
                            n = length(unique(PP))), 
                       by = c("PP.region", "powerplant_cat", "PP.type", "edge")]
 setkey(InMAPsummary, PP.region, powerplant_cat, PP.type, edge)
@@ -491,6 +644,14 @@ edgePerc_summary <- edges[!is.na(edge) & PP.region %in% c("IndustrialMidwest", "
 setkey(edgePerc_summary, PP.region, powerplant_cat,PP.type)
 edgePerc_summary
 
+
+## ------------------------------------------------------------------------------------ ##
+##   Map of monitors and power plants with no edges                                     ##
+## ------------------------------------------------------------------------------------ ##
+regions = c("IndustrialMidwest","Northeast", "Southeast")
+
+pdf(file = "results/degree_zero.pdf", height = 4)
+par(mar = c(0,0,0,0))
 US <- map("state",fill=FALSE, plot=FALSE)
 US.names <- US$names
 US.IDs <- sapply(strsplit(US.names,":"),function(x) x[1])
@@ -508,21 +669,82 @@ col.region[US.IDs %in% Southeast] <- viridis(4, alpha = 0.5)[3]
 map("state", fill = TRUE, col = col.region, plot = TRUE)
 #US_poly_sp <- map2SpatialPolygons(US,IDs=US.IDs,proj4string=CRS("+proj=longlat + datum=wgs84"))
 #plot(US_poly_sp)
-setkey(edges, Monitor)
-points(edges[J(unique(Monitor)), c("receptor.longitude","receptor.latitude"), mult = "first"],
-       pch = 21, bg = "black")
-setkey(edges,PP)
 
-pp.cex <- ifelse(powerplants$powerplant_cat == 1, 0.6, 1.25)
-pp.bg <- ifelse(powerplants$linkedMonitorsPerc > 0.5, "red","yellow")
-points(powerplants$PP.longitude, powerplants$PP.latitude,
+points(monitors$receptor.longitude, monitors$receptor.latitude, pch = 21, 
+       bg = ifelse(monitors$degree.zero == 1, "red","black"))
+points(monitors[degree.zero == 1,]$receptor.longitude, monitors[degree.zero == 1,]$receptor.latitude,
+       pch = 21, bg = "red")
+
+pp.cex <- ifelse(powerplants[PP.region %in% regions,]$avgemissions < quantile(powerplants[PP.region %in% regions,]$avgemissions, 0.8), 0.6, 1.25)
+pp.bg <- ifelse(powerplants[PP.region %in% regions,]$degree.zero == 1, "red", viridis(2)[2]) 
+points(powerplants[PP.region %in% regions,]$PP.longitude, powerplants[PP.region %in% regions,]$PP.latitude,
        pch = 24, bg = pp.bg, col = "black", lwd = 1, cex = pp.cex)
-legend(x = -79, y = 33.5, 
-       legend = c("coal power\nplant","AQS monitor"),
-       pch = c(24,21),
-       pt.cex = c(1.25,1),
-       pt.bg = c(viridis(2)[2],"black"),
-       cex = 1, bty = "n")
+legend(x = -78.5, y = 33, title = "Coal power\nplants",
+       legend = c("linked" ,"unlinked"),
+       pch = c(24, 24),
+       pt.cex = c(1,1),
+       pt.bg = c(viridis(2)[2],"red"),
+       cex = 0.75, bty = "n", title.adj = 0, xjust = 0, inset = 0, y.intersp = 1)
+legend(x = -78.5, y = 29, title = "AQS monitors",
+       legend = c("linked" ,"unlinked"),
+       pch = c(21, 21),
+       pt.cex = c(1,1),
+       pt.bg = c("black","red"),
+       cex = 0.75, bty = "n", title.adj = 0, xjust = 0, inset = 0, y.intersp = 1)
+dev.off()
 
+## ------------------------------------------------------------------------------------ ##
+##   Other degree zero analysis                                                          ##
+## ------------------------------------------------------------------------------------ ##
 
+#PA power plants
+PP.PA <- powerplants[PP.state == "PA" & powerplant_cat == 2,]
+setkey(PP.PA, PP.longitude)
+PP.PA
 
+plotEmissionsNetwork(edges[PP.state == "PA" & powerplant_cat == 2,], xlim = c(-80.5,-74.5), ylim = c(39.5,42.1))
+
+## ------------------------------------------------------------------------------------ ##
+##   Map of power plants by state                                                        ##
+## ------------------------------------------------------------------------------------ ##
+pdf(file = "results/bystateSE.pdf", width = 6.5, height = 6.5)
+par(mai = c(0,0,0,0))
+par(mfrow = c(3,3))
+regions <- c("Southeast")
+lapply(unique(edges[PP.region %in% regions,]$PP.state), function(state){
+  state = "MD"
+  pairs.subset <- edges[PP.state == state, ]
+  edges.subset <- edges[PP.state == state & edge == 1, ]
+  edges.subset <- edges.subset[order(distance, decreasing = TRUE),]
+  colors <- viridis(4)
+  color.index <- 5 - edges.subset$distance_cat
+  
+  if(unique(pairs.subset$PP.region) == "Northeast") {
+    xlim = c(-89, -70)
+    ylim = c(33,46)
+  }
+  if(unique(pairs.subset$PP.region) == "IndustrialMidwest") {
+    xlim = c(-95, -75)
+    ylim = c(35,48)
+  }
+  if(unique(pairs.subset$PP.region) == "Southeast") {
+    xlim = c(-95, -74)
+    ylim = c(27,39)
+  }
+  map("state",fill=FALSE, plot=TRUE, xlim = xlim, ylim = ylim)
+  points(pairs.subset$receptor.longitude,
+         pairs.subset$receptor.latitude,
+         pch = 21, bg = "black")
+  segments(edges.subset$receptor.longitude,
+           edges.subset$receptor.latitude,
+           edges.subset$PP.longitude,
+           edges.subset$PP.latitude,
+           col = colors[color.index],
+           lwd = 0.3)
+  points(pairs.subset$PP.longitude,
+         pairs.subset$PP.latitude,
+         pch = 24,
+         cex = ifelse(pairs.subset$powerplant_cat == 2, 1.25,0.6),
+         bg = viridis(2)[2], lwd = 1)
+})
+dev.off()
