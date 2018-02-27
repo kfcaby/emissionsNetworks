@@ -75,7 +75,7 @@ gams.test_distLag <- function(dataset, k1 = 3, adjust.temp = FALSE){
 }
 
 
-fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations, temperature, start.date, end.date, 
+fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations, temperature = NULL, start.date, end.date, 
                              percent.of.powerplants = 100, alpha = 0.05, p.adjust.method = "BH",
                              lag = "distance_dependent", k1 = 3, plot.pvalues = FALSE, wind.speed = 13,
                              max.distance = 2000, 
@@ -96,8 +96,9 @@ fitDailyPMmodels <- function(emissions, PM, PP_locations, M_locations, temperatu
   #Subset emissions and PM by start and end date
   emissions <- emissions[ ,as.Date(colnames(emissions)) >= start.date & as.Date(colnames(emissions)) <= end.date]
   PM <- PM[ ,as.Date(colnames(PM)) >= start.date & as.Date(colnames(PM)) <= end.date]
-  temperature <- temperature[ ,as.Date(colnames(temperature)) >= start.date & as.Date(colnames(temperature)) <= end.date]
-  
+  if(adjust.temp == TRUE){
+    temperature <- temperature[ ,as.Date(colnames(temperature)) >= start.date & as.Date(colnames(temperature)) <= end.date]
+  }
   #Take only biggest emitters
   emissions <- emissions[rowSums(emissions, na.rm = TRUE) > quantile(rowSums(emissions, na.rm = TRUE), 1 - percent.of.powerplants/100),]
   
