@@ -20,6 +20,9 @@ region_abbr <- Vectorize(function(region){
   if(region == "IndustrialMidwest") abbr <- "IMW"
   if(region == "Northeast") abbr <- "NE"
   if(region == "Southeast") abbr <- "SE"
+  if(region == "Northwest") abbr <- "NW"
+  if(region == "Southwest") abbr <- "SW"
+  if(region == "UpperMidwest") abbr <- "UMW"
   return(abbr)
 }, vectorize.args = "region")
 
@@ -65,15 +68,17 @@ powerplants <- edges[ ,
                           PP.region = unique(PP.region), PP.state = unique(PP.state),
                           PP.latitude = unique(PP.latitude), PP.longitude = unique(PP.longitude),
                           linkedMonitors = sum(edge,na.rm = TRUE),
-                          linkedMonitorsPerc = sum(edge,na.rm = TRUE)/sum(edge ==1 | edge == 0, na.rm = TRUE),
+                          linkedMonitorsPerc = round(sum(edge,na.rm = TRUE)/sum(edge ==1 | edge == 0, na.rm = TRUE),2),
                           linkedMonitors.neg = sum(edge.neg,na.rm = TRUE),
+                          linkedMonitors.negPerc = round(sum(edge.neg,na.rm = TRUE)/sum(edge ==1 | edge == 0, na.rm = TRUE),2),
                           powerplant_cat = unique(powerplant_cat),
                           emissions.ZeroDays = unique(emissions.ZeroDays)),
                      by = "PP"]
 powerplants[ , type := ifelse(emissions.ZeroDays > 90, "seasonal", "all.year")]
-powerplants[ , link.cat := ifelse(linkedMonitorsPerc == 0, "none", ifelse(linkedMonitorsPerc > 0.75, "high", "normal"))]
-powerplants[ , link.cat := factor(link.cat, levels = c("none","normal","high"))]
+powerplants[ , link.cat := ifelse(linkedMonitors == 0, "unlinked", "linked")]
+powerplants[ , link.cat := factor(link.cat, levels = c("linked", "unlinked"))]
 powerplants[ , degree.zero := ifelse(linkedMonitors == 0, 1, 0)]
+powerplants[ , PP.region.abbr := region_abbr(PP.region)]
 
 ## ------------------------------------------------------------------------------------ ##
 ##   summary table                                                                      ##
@@ -98,100 +103,6 @@ m2 <- melt(m1, id.vars = "receptor.region")
 xtable(dcast(m2, variable ~ receptor.region, value.var = "value"))
 
 ## ------------------------------------------------------------------------------------ ##
-##   why do some power plants not connect to anything                                   ##
-## ------------------------------------------------------------------------------------ ##
-
-txt.size = 10
-theme2 <- theme(axis.title.x = element_blank(),
-                legend.position = "none",
-                axis.title = element_text(size = txt.size),
-                axis.text = element_text(size = txt.size),
-                legend.text = element_text(size = txt.size),
-                legend.title = element_text(size = txt.size),
-                plot.title = element_text(size = txt.size + 2, hjust = 0.5))
-theme1 <- theme(axis.title.x = element_blank(),
-                legend.position = "bottom",
-                axis.title = element_text(size = txt.size),
-                axis.text = element_text(size = txt.size),
-                legend.text = element_text(size = txt.size),
-                legend.title = element_text(size = txt.size),
-                legend.key.size = unit(6, "line"),
-                plot.title = element_text(size = txt.size + 2, hjust = 0.5)) 
-
-pt.size <- 10
-
-#pdf("monitor_networks/plots/emissions_analysis.pdf", height = 9, width = 22)
-
-g_legend<-function(a.gplot){
-  tmp <- ggplot_gtable(ggplot_build(a.gplot))
-  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
-  legend <- tmp$grobs[[leg]]
-  return(legend)}
-
-# num.PP <- ggplot(powerplants, aes(x = PP.region, y = n.powerplants, color = as.factor(link.cat))) +
-#   labs(title = "Number of powerplants", y = "Powerplants" ) + geom_point(size = pt.size, shape = 17) + theme_bw() + 
-#   scale_color_manual(values = c(viridis(2)[2],viridis(2)[1]),name = "Powerplants: ",
-#                      labels = c("without edges","with edges"))+ ylim(0,125)+theme2
-
-PP.summary <- powerplants[ , list(powerplants = .N), by = c("PP.region","link.cat")]
-setkey(PP.summary, PP.region, link.cat)
-
-p1 <- ggplot(powerplants.subset, aes(x = PP.region, y = linkedMonitorsPerc)) +
-  labs(title = "", y = "percent of monitors linked") + geom_boxplot(alpha = 0.7) + theme_bw() +theme1
-
-p2 <- ggplot(powerplants.subset, aes(x = PP.region, y = avgemissions, fill = link.cat)) +
-  labs(title = "Average daily emissions", y = "SO2") +  geom_boxplot(alpha = 0.7) + theme_bw() + 
-  scale_fill_viridis(discrete = TRUE, direction = -1) + theme2
-
-p3 <- ggplot(powerplants.subset, aes(x = PP.region, y = sdemissions,  fill = link.cat)) +
-  labs(title = "Standard deviation in daily emissions", y = "SO2") +  geom_boxplot(alpha = 0.7) + theme_bw() + 
-  scale_fill_viridis(discrete = TRUE, direction = -1) + theme2
-
-p4 <- ggplot(powerplants.subset, aes(x = PP.region, y = emissions.ZeroDays, fill = link.cat)) +
-  labs(title = "Number of days with missing emissions data", y = "number of days") +
-  geom_boxplot(alpha = 0.7) + theme_bw() + 
-  scale_fill_viridis(discrete = TRUE, direction = -1, option = "magma") + theme2
-
-p5 <- ggplot(powerplants.subset, aes(x = PP.region, y = emissions.ZeroDays, fill = as.factor(powerplant_cat))) +
-  labs(title = "", y = "number of days") +
-  geom_boxplot(alpha = 0.7) + theme_bw() + 
-  scale_fill_viridis(discrete = TRUE, direction = -1) + theme2
-
-
-#pdf(file = "results/zero_emissions.pdf", height = 3, width = 6.5)
-p6 <- ggplot(powerplants.subset, aes(x = PP.region, y = emissions.ZeroDays, fill = link.cat)) +
-  labs(title = "", y = "number of\nzero emissions days") +
-  theme(axis.title.x = element_blank()) +
-  geom_boxplot(alpha = 0.7) + 
-  scale_fill_viridis(discrete = TRUE, direction = -1, 
-                     option = "magma", name = "Connectivity\nCategory")
-#dev.off()
-                     
-mylegend<-g_legend(p1)
-
-blank <- rectGrob(gp = gpar(col = "white"))
-
-
-grid.arrange(p1,p2,p3, ncol = 3)
-
-p2
-
-grid.arrange(num.PP, p1 + theme(legend.position = "none"),p2,mylegend, blank, ncol = 3,
-             top = textGrob("Why do some power plants have linked monitors and others do not?",
-                            gp = gpar(fontsize = 30)),
-             layout_matrix = rbind(c(5,5,5),c(1,2,3),c(4,4,4)),
-             heights = c(0.05,0.75, 0.20))
-
-grid.arrange(p3,p4,p5,mylegend, blank, ncol = 3,
-             top = textGrob("Why do some power plants have linked monitors and others do not?",
-                            gp = gpar(fontsize = 30)),
-             layout_matrix = rbind(c(5,5,5),c(1,2,3),c(4,4,4)),
-             heights = c(0.05,0.75, 0.20))
-
-
-
-
-## ------------------------------------------------------------------------------------ ##
 ##   remove pairs from hyper connectors and zero connectors                             ##
 ## ------------------------------------------------------------------------------------ ##
 monitors.subset <- monitors[linkedPP > 0, ]
@@ -204,32 +115,37 @@ edges <- edges[Monitor %in% monitors.subset$Monitor & PP %in% powerplants.subset
 #recalculate power plant and monitor stats
 #Monitors
 monitors.subset <- edges[ , list(Monitor = unique(Monitor), 
-                          avgPM = unique(avgPM), 
-                          sdPM = unique(sdPM), 
-                          linkedPP = sum(edge, na.rm = TRUE),
-                          linkedPP.neg = sum(edge.neg, na.rm = TRUE),
-                          exposure = sum(avgemissions*(1/distance)*edge, na.rm = TRUE),
-                          exposure_inmap = sum(inmapPM, na.rm = TRUE),
-                          receptor.region = unique(receptor.region),
-                          receptor.state = unique(receptor.state),
-                          monitor.freq = unique(monitor.freq),
-                          receptor.latitude = unique(receptor.latitude),
-                          receptor.longitude = unique(receptor.longitude)),
-                   by = "Monitor"]
+                                 avgPM = unique(avgPM), 
+                                 sdPM = unique(sdPM), 
+                                 linkedPP = sum(edge, na.rm = TRUE),
+                                 linkedPP.neg = sum(edge.neg, na.rm = TRUE),
+                                 exposure = sum(avgemissions*(1/distance)*edge, na.rm = TRUE),
+                                 exposure_inmap = sum(inmapPM, na.rm = TRUE),
+                                 receptor.region = unique(receptor.region),
+                                 receptor.state = unique(receptor.state),
+                                 monitor.freq = unique(monitor.freq),
+                                 receptor.latitude = unique(receptor.latitude),
+                                 receptor.longitude = unique(receptor.longitude)),
+                          by = "Monitor"]
 
 
 #Power plants
 powerplants.subset <- edges[ PP.region %in% c("IndustrialMidwest", "Northeast", "Southeast"),
-                      list(avgemissions = unique(avgemissions),
-                           sdemissions = unique(sdemissions), emissions.NAdays = unique(emissions.NAdays),
-                           PP.region = unique(PP.region), PP.state = unique(PP.state),
-                           PP.latitude = unique(PP.latitude), PP.longitude = unique(PP.longitude),
-                           linkedMonitors = sum(edge,na.rm = TRUE),
-                           linkedMonitorsPerc = sum(edge,na.rm = TRUE)/sum(edge ==1 | edge == 0, na.rm = TRUE),
-                           linkedMonitors.neg = sum(edge.neg,na.rm = TRUE),
-                           powerplant_cat = unique(powerplant_cat),
-                           emissions.ZeroDays = unique(emissions.ZeroDays)),
-                      by = "PP"]
+                             list(avgemissions = unique(avgemissions),
+                                  sdemissions = unique(sdemissions), emissions.NAdays = unique(emissions.NAdays),
+                                  PP.region = unique(PP.region), PP.state = unique(PP.state),
+                                  PP.latitude = unique(PP.latitude), PP.longitude = unique(PP.longitude),
+                                  linkedMonitors = sum(edge,na.rm = TRUE),
+                                  linkedMonitorsPerc = sum(edge,na.rm = TRUE)/sum(edge ==1 | edge == 0, na.rm = TRUE),
+                                  linkedMonitors.neg = sum(edge.neg,na.rm = TRUE),
+                                  powerplant_cat = unique(powerplant_cat),
+                                  emissions.ZeroDays = unique(emissions.ZeroDays)),
+                             by = "PP"]
+
+
+
+
+
 
 ## ------------------------------------------------------------------------------------ ##
 ##   Blank Map                                                                          ##
@@ -694,6 +610,147 @@ legend(x = -78.5, y = 29, title = "AQS monitors",
 dev.off()
 
 ## ------------------------------------------------------------------------------------ ##
+##   why do some power plants not connect to anything - Appendix A                      ##
+## ------------------------------------------------------------------------------------ ##
+setkey(powerplants, PP)
+setkey(monitors, Monitor)
+regions <- c("IndustrialMidwest", "Northeast", "Southeast")
+
+#emissions
+emissions2005 <- fread(file = "data/emissions2005.csv")
+names(emissions2005)[1] <- "PP"
+setkey(emissions2005, PP)
+
+emissions2005 <- emissions2005[powerplants[PP.region %in% regions,]$PP]
+emissions.long <- melt(emissions2005, variable.name = "date", value.name = "SO2")
+setkey(emissions.long, PP)
+emissions.long <- emissions.long[powerplants[PP.region %in% regions ,.(PP,PP.region)]]
+emissions.long$date <- as.Date(emissions.long$date)
+
+emissions.daily <- emissions.long[ , list(dailySO2 = sum(SO2)), by = c("date","PP.region")]
+#PP3136 (negative), #PP3149 (positive)
+#PM
+PM2005 <- fread("data/PM.daily.monitor2005_raw.csv")
+names(PM2005)[1] <- "Monitor"
+setkey(PM2005, Monitor)
+
+PM2005 <- PM2005[monitors$Monitor]
+PM2005.long <- melt(PM2005, variable.name = "date", value.name = "PM25")
+setkey(PM2005.long, Monitor)
+PM2005.long <- PM2005.long[monitors[ ,.(Monitor,receptor.region)]]
+PM2005.long$date <- as.Date(PM2005.long$date)
+
+PM2005.daily <- PM2005.long[ , list(avgPM = mean(PM25, na.rm = TRUE)), by = c("date", "receptor.region")]
+
+p1 <- ggplot(emissions.daily, aes(x = date, y = dailySO2, group = PP.region, linetype = PP.region)) + geom_line() + 
+  theme(legend.direction = "horizontal", legend.position = "bottom", axis.title.x = element_blank()) +
+  guides(linetype = guide_legend(title = "region")) +
+  labs(y = "SO2 (tons)")
+p2 <- ggplot(PM2005.daily, aes(x = date, y = avgPM, group = receptor.region, linetype = receptor.region)) + geom_line() +
+  theme(axis.title.x = element_blank()) + labs(y = "PM2.5")
+mylegend<-g_legend(p1)
+blank <- rectGrob(gp = gpar(col = "white"))
+
+#pdf(file = "results/timeseries.pdf", width = 6.5, height = 5)
+grid.arrange(p1 + theme(legend.position = "none"), 
+             p2 + theme(legend.position = "none"), 
+             mylegend, 
+             #ncol = 1, 
+             layout_matrix = rbind(c(1,1),c(4,2),c(3,3)),
+             heights = c(0.45,0.45,0.1),
+             widths = c(0.022,0.978))
+#dev.off()
+
+
+p1 <- ggplot(emissions.long[PP %in% c("PP3136", "PP3149")],
+       aes(x = date, y = SO2, linetype = PP)) + geom_line() + 
+  theme(legend.direction = "horizontal")
+      
+
+regions = c("IndustrialMidwest", "Northeast", "Southeast")
+
+#summary table
+PP.link.sum <- powerplants[ PP.region %in% regions , list(powerplants = .N, 
+                                                          neg = median(linkedMonitors.neg), 
+                                                          pos = median(linkedMonitors)), 
+                            by = c("PP.region", "link.cat")]
+setkey(PP.link.sum, PP.region, link.cat)
+  sum1 <- dcast(PP.link.sum, link.cat~PP.region, value.var = "powerplants")
+xtable(sum1)
+  
+txt.size = 10
+theme2 <- theme(axis.title.x = element_blank(),
+                legend.position = "none",
+                axis.title = element_text(size = txt.size),
+                axis.text = element_text(size = txt.size),
+                legend.text = element_text(size = txt.size),
+                legend.title = element_text(size = txt.size),
+                plot.title = element_text(size = txt.size + 2, hjust = 0.5))
+theme1 <- theme(axis.title.x = element_blank(),
+                legend.position = "bottom",
+                axis.title = element_text(size = txt.size),
+                axis.text = element_text(size = txt.size),
+                legend.text = element_text(size = txt.size),
+                legend.title = element_text(size = txt.size),
+                legend.key.size = unit(6, "line"),
+                plot.title = element_text(size = txt.size + 2, hjust = 0.5)) 
+
+pt.size <- 10
+
+#pdf("monitor_networks/plots/emissions_analysis.pdf", height = 9, width = 22)
+
+g_legend<-function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)}
+
+
+p1 <- ggplot(powerplants[PP.region %in% regions,], aes(x = PP.region.abbr, y = avgemissions, fill = link.cat)) + 
+  geom_boxplot(alpha = 0.75) +
+  scale_fill_viridis(discrete = TRUE, direction = -1) + 
+  theme_bw() +
+  theme(text = element_text(size = 10),
+        legend.direction = "horizontal", 
+        legend.position = "bottom", 
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        plot.title = element_text(size = 10)) +
+  guides(fill = guide_legend(title = "power plant")) + 
+  labs(title = "average daily SO2 (tons)")
+p2 <- ggplot(powerplants[PP.region %in% regions,], aes(x = PP.region.abbr, y = sdemissions, fill = link.cat)) + 
+  geom_boxplot(alpha = 0.75) + 
+  scale_fill_viridis(discrete = TRUE, direction = -1) +
+  theme_bw() +
+  theme(text = element_text(size = 10),
+        legend.position = "none", 
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        plot.title = element_text(size = 10)) +
+  labs(title = "average daily stdev in SO2")
+p3 <- ggplot(powerplants[PP.region %in% regions,], aes(x = PP.region.abbr, y = 365 - emissions.ZeroDays, fill = link.cat)) +
+  geom_boxplot(alpha = 0.75) +
+  theme_bw() +
+  scale_fill_viridis(discrete = TRUE, direction = -1) +
+  theme(text = element_text(size = 10),
+        legend.position = "none", 
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        plot.title = element_text(size = 10)) + 
+  labs(title = "operating days")
+mylegend<-g_legend(p1)
+blank <- rectGrob(gp = gpar(col = "white"))
+
+pdf(file = "results/link.pdf", height = 3, width = 6.5)
+grid.arrange(p1 + theme(legend.position = "none"),p2,p3, mylegend, ncol = 3,
+             layout_matrix = rbind(c(1,2,3),c(4,4,4)),
+             heights = c(0.90,0.10))
+dev.off()
+
+ggplot(powerplants[PP.region %in% regions], aes(x = linkedMonitors.negPerc, y = linkedMonitorsPerc, color = PP.region)) + geom_point()
+
+
+## ------------------------------------------------------------------------------------ ##
 ##   Other degree zero analysis                                                          ##
 ## ------------------------------------------------------------------------------------ ##
 
@@ -703,6 +760,14 @@ setkey(PP.PA, PP.longitude)
 PP.PA
 
 plotEmissionsNetwork(edges[PP.state == "PA" & powerplant_cat == 2,], xlim = c(-80.5,-74.5), ylim = c(39.5,42.1))
+
+
+PP.WI <- powerplants[PP.state == "WI",]
+setkey(PP.WI, degree.zero,PP.longitude)
+PP.WI
+
+plotEmissionsNetwork(edges[PP.state == "WI",], xlim = c(-93.2,-86.5), ylim = c(42.5,47))
+
 
 ## ------------------------------------------------------------------------------------ ##
 ##   Map of power plants by state                                                        ##

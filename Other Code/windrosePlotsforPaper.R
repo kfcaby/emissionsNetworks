@@ -144,6 +144,12 @@ g_legend<-function(a.gplot){
 
 data <- createWindroseData(edges[distance_cat == 4, ], regions = "Northeast")
 
+edges[ , distance_cat := ifelse(distance <= 250, 1, 
+                                ifelse(distance <= 500, 2,
+                                       ifelse(distance <= 750, 3,
+                                              ifelse(distance <= 1000, 4, NA))))]
+
+
 #Monitor Center
 
 p13 <- plotPairCounts(edges[distance < 1000, ], regions = "IndustrialMidwest")
@@ -167,7 +173,7 @@ p12 <- plotEdgeProbs(edges[distance_cat == 4, ], regions = "Southeast")
 legend <- g_legend(p13)
 blank <- rectGrob(gp = gpar(col = "white"))
 
-#pdf(file = "results/windrose_plots.pdf", width = 6.5, height = 8)
+#pdf(file = "results/windrose_plots_negative.pdf", width = 6.5, height = 8)
 grid.arrange(arrangeGrob(p13+theme(legend.position = "none"),
                          p16+theme(legend.position = "none"),
                          p1,p4,p7,p10, ncol = 1, 
@@ -189,7 +195,7 @@ grid.arrange(arrangeGrob(p13+theme(legend.position = "none"),
 
 #Power plant center
 
-#Monitor Center
+
 
 p13 <- plotPairCounts(edges[distance < 1000, ], regions = "IndustrialMidwest", center = "powerplants")
 p14 <- plotPairCounts(edges[distance < 1000, ], regions = "Northeast", center = "powerplants")
@@ -212,7 +218,7 @@ p12 <- plotEdgeProbs(edges[distance_cat == 4, ], regions = "Southeast", center =
 legend <- g_legend(p13)
 blank <- rectGrob(gp = gpar(col = "white"))
 
-#pdf(file = "results/windrose_plots_powerplant_center.pdf", width = 6.5, height = 8)
+#pdf(file = "results/windrose_plots_powerplant_negative.pdf", width = 6.5, height = 8)
 grid.arrange(arrangeGrob(p13+theme(legend.position = "none"),
                          p16+theme(legend.position = "none"),
                          p1,p4,p7,p10, ncol = 1, 
@@ -232,9 +238,10 @@ grid.arrange(arrangeGrob(p13+theme(legend.position = "none"),
 #dev.off()
 
 
+#pdf(file = "/Users/kfcummiskey/Desktop/positive.pdf")
+grid.arrange(p14 + theme(legend.position = "none"),p17 + theme(legend.position = "none"), 
+             legend, ncol = 1,top = textGrob("Northeast",gp = gpar(fontsize = 12)))
+#dev.off()
 
-
-
-
-
+sum(edges$edge, na.rm = TRUE)
 
