@@ -218,7 +218,7 @@ p12 <- plotEdgeProbs(edges[distance_cat == 4, ], regions = "Southeast", center =
 legend <- g_legend(p13)
 blank <- rectGrob(gp = gpar(col = "white"))
 
-#pdf(file = "results/windrose_plots_powerplant_negative.pdf", width = 6.5, height = 8)
+#pdf(file = "results/windrose_plots_powerplant_nospikes.pdf", width = 6.5, height = 8)
 grid.arrange(arrangeGrob(p13+theme(legend.position = "none"),
                          p16+theme(legend.position = "none"),
                          p1,p4,p7,p10, ncol = 1, 
