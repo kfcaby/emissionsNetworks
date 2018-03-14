@@ -6,6 +6,7 @@ require(cowplot)
 
 createWindroseData <- function(edges, regions, distlim = c(0,1000), center = "monitors"){
   edges_subset <- edges[!is.na(edge), ]
+  
   if(center == "monitors"){
     edges_subset <- edges_subset[receptor.region %in% regions, ]
   }
@@ -13,6 +14,8 @@ createWindroseData <- function(edges, regions, distlim = c(0,1000), center = "mo
     edges_subset <- edges_subset[PP.region %in% regions, ]
   }
   edges_subset <- edges_subset[distance >= distlim[1] & distance <= distlim[2], ]
+  
+  if(nrow(edges_subset) == 0) {return(NULL)}
   
   distance <- edges_subset$distance
   edge <- edges_subset$edge
@@ -64,73 +67,87 @@ createWindroseData <- function(edges, regions, distlim = c(0,1000), center = "mo
   data[ , prob := edge/pairs.dir]
   
   return(data)
+
 }
+
+# edges <- import_edges2(2006,path)
+# edges <- edges[edge == 1,]
+# edges <- edges[Monitor %in% monitor.subset & PP %in% PP.subset,]
+# regions <- "Northeast"
+# center <- "powerplants"
+# edges <- edges[PP.region == "Northeast",]
 
 plotPairCounts <- function(edges, regions, title = "", center = "monitors"){
   data <- createWindroseData(edges, regions = regions, center = center)
-  txt.size = 12
-  if(center == "monitors") {legend.title <- "monitor to power plant distance (km)"}
-  if(center == "powerplants") {legend.title <- "power plant to monitor distance (km)"}
-  plot <- ggplot(data = data,aes(x = dir.binned, fill = distance.binned)) +
-    geom_bar() + 
-    scale_x_discrete(drop = FALSE,
-                     labels = c("N","","","E","","","S","","","W","","")) + 
-    coord_polar(start = -((30/2)/360) * 2*pi) +
-    scale_fill_manual(name = legend.title,
-                      labels = c("750-1000","500-750","250-500","0-250"),
-                      values = viridis(4),
-                      drop = FALSE) +
-    theme(axis.title.x = element_blank(),
-          panel.grid.major = element_line(colour="grey65"),
-          legend.position = "bottom",
-          axis.title = element_text(size = txt.size),
-          axis.text.x = element_text(size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.line = element_blank(),
-          #axis.ticks.y = element_blank(),
-          axis.title.y = element_blank(),
-          legend.text = element_text(size = txt.size),
-          legend.title = element_text(size = txt.size),
-          plot.title = element_text(size = 12, hjust = 0.5),
-          plot.margin = unit(rep(-0.3,4), "cm")
-    ) + 
-    #  ylim(ylim[1],ylim[2]) +
-    ggtitle(title) + guides(fill = guide_legend(reverse = T))
-  return(plot)
+  if(is.null(data)) {return(rectGrob(gp = gpar(col = "white")))}
+  else{
+    txt.size = 12
+    if(center == "monitors") {legend.title <- "monitor to power plant distance (km)"}
+    if(center == "powerplants") {legend.title <- "power plant to monitor distance (km)"}
+    plot <- ggplot(data = data,aes(x = dir.binned, fill = distance.binned)) +
+      geom_bar() + 
+      scale_x_discrete(drop = FALSE,
+                       labels = c("N","","","E","","","S","","","W","","")) + 
+      coord_polar(start = -((30/2)/360) * 2*pi) +
+      scale_fill_manual(name = legend.title,
+                        labels = c("750-1000","500-750","250-500","0-250"),
+                        values = viridis(4),
+                        drop = FALSE) +
+      theme(axis.title.x = element_blank(),
+            panel.grid.major = element_line(colour="grey65"),
+            legend.position = "bottom",
+            axis.title = element_text(size = txt.size),
+            axis.text.x = element_text(size = 8),
+            axis.text.y = element_text(size = 8),
+            axis.line = element_blank(),
+            #axis.ticks.y = element_blank(),
+            axis.title.y = element_blank(),
+            legend.text = element_text(size = txt.size),
+            legend.title = element_text(size = txt.size),
+            plot.title = element_text(size = 12, hjust = 0.5)
+ #           plot.margin = unit(rep(-0.3,4), "cm")
+      ) + labs(title = title) +
+      #  ylim(ylim[1],ylim[2]) +
+      guides(fill = guide_legend(reverse = T))
+    return(plot + theme(legend.position = "none"))
+  }
 }
 
-plotEdgeProbs <- function(edges, regions, center = "monitors"){
+plotEdgeProbs <- function(edges, regions, title = "", center = "monitors"){
   data <- createWindroseData(edges, regions = regions, center = center)
-  data_summary <- data[ , list(prob = sum(prob)),
-                        by = c("distance.binned","dir.binned")]
-  txt.size = 12
-  title = ""
-  legend.position = "none"
-  plot <- ggplot(data = data_summary, aes(x = dir.binned, y = prob, fill = distance.binned)) +
-    geom_col() + scale_x_discrete(drop = FALSE,
-                                  labels = c("N","","","E","","","S","","","W","","")) +
-    coord_polar(start = -((30/2)/360) * 2*pi) +
-    scale_fill_manual(name = "Distance to Source (km)",
-                      labels = c("750-1000","500-750","250-500","0-250"),
-                      values = viridis(4),
-                      drop = FALSE) +
-    theme(axis.title.x = element_blank(),
-          panel.grid.major = element_line(colour="grey65"),
-          legend.position = legend.position,
-          axis.title = element_blank(),
-          axis.text.x = element_text(size = 8),
-          axis.text.y = element_text(size = 8),
-          axis.line = element_blank(),
-          #axis.ticks.y = element_blank(),
-          legend.text = element_text(size = txt.size),
-          legend.title = element_text(size = txt.size),
-          plot.title = element_text(size = 12, hjust = 0.5),
-          plot.margin = unit(rep(-0.3,4), "cm")
-    ) + 
-    #  ylim(ylim[1],ylim[2]) + 
-    ggtitle(title)
-  
-  return(plot)
+  if(is.null(data)) {return(rectGrob(gp = gpar(col = "white")))}
+  else{
+    data_summary <- data[ , list(prob = sum(prob)),
+                          by = c("distance.binned","dir.binned")]
+    txt.size = 12
+    #title = ""
+    legend.position = "none"
+    plot <- ggplot(data = data_summary, aes(x = dir.binned, y = prob, fill = distance.binned)) +
+      geom_col() + scale_x_discrete(drop = FALSE,
+                                    labels = c("N","","","E","","","S","","","W","","")) +
+      coord_polar(start = -((30/2)/360) * 2*pi) +
+      scale_fill_manual(name = "Distance to Source (km)",
+                        labels = c("750-1000","500-750","250-500","0-250"),
+                        values = viridis(4),
+                        drop = FALSE) +
+      theme(axis.title.x = element_blank(),
+            panel.grid.major = element_line(colour="grey65"),
+            legend.position = legend.position,
+            axis.title = element_blank(),
+            axis.text.x = element_text(size = 8),
+            axis.text.y = element_text(size = 8),
+            axis.line = element_blank(),
+            #axis.ticks.y = element_blank(),
+            legend.text = element_text(size = txt.size),
+            legend.title = element_text(size = txt.size),
+            plot.title = element_text(size = 12, hjust = 0.5)
+#            plot.margin = unit(rep(-0.3,4), "cm")
+      ) + 
+      #  ylim(ylim[1],ylim[2]) + 
+     labs(title = title)
+    
+    return(plot)
+  }
 }
 
 g_legend<-function(a.gplot){
